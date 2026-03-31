@@ -134,8 +134,8 @@
 
 .flux-root--glass {
   background-color: color-mix(in srgb, var(--flux-colors-elevation2) calc(var(--flux-glass-opacity) * 100%), transparent) !important;
-  backdrop-filter: blur(var(--flux-glass-blur)) saturate(var(--flux-glass-vibrancy)) invert(var(--flux-glass-invert));
-  -webkit-backdrop-filter: blur(var(--flux-glass-blur)) saturate(var(--flux-glass-vibrancy)) invert(var(--flux-glass-invert));
+  backdrop-filter: blur(var(--flux-glass-blur)) saturate(var(--flux-glass-vibrancy)) invert(var(--flux-glass-invert)) !important;
+  -webkit-backdrop-filter: blur(var(--flux-glass-blur)) saturate(var(--flux-glass-vibrancy)) invert(var(--flux-glass-invert)) !important;
 }
 
 .flux-root--glass .flux-folder-wrapper,
