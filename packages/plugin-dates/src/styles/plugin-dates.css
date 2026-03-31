@@ -1,0 +1,81 @@
+.flux-dates-input {
+  outline: none;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  font-family: inherit;
+  border: none;
+  background-color: transparent;
+  appearance: none;
+  padding: 0 var(--flux-space-sm);
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  height: 100%;
+}
+
+.flux-dates-input-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  border-radius: var(--flux-radii-sm);
+  color: inherit;
+  height: var(--flux-sizes-rowHeight);
+  background-color: var(--flux-colors-elevation3);
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-input) var(--flux-colors-elevation1);
+}
+
+.flux-dates-input-container:hover {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-hover) var(--flux-colors-accent1);
+}
+
+.flux-dates-input-container:focus-within {
+  box-shadow: 0 0 0 var(--flux-borderWidths-focus) var(--flux-colors-accent2);
+}
+
+.flux-dates-input-container--textarea {
+  height: auto;
+}
+
+.flux-dates-wrapper {
+  position: relative;
+}
+
+.flux-dates-wrapper .react-datepicker__header {
+  background-color: var(--flux-colors-elevation3);
+  border: none;
+}
+
+.flux-dates-wrapper .react-datepicker__current-month,
+.flux-dates-wrapper .react-datepicker__day,
+.flux-dates-wrapper .react-datepicker__day-name {
+  color: inherit;
+}
+
+.flux-dates-wrapper .react-datepicker__day {
+  transition: all 0.2s ease;
+}
+
+.flux-dates-wrapper .react-datepicker__day--selected {
+  background-color: var(--flux-colors-accent1);
+  color: var(--flux-colors-highlight3);
+}
+
+.flux-dates-wrapper .react-datepicker__day--keyboard-selected {
+  background-color: transparent;
+  color: inherit;
+}
+
+.flux-dates-wrapper .react-datepicker__day--today {
+  background-color: var(--flux-colors-accent3);
+  color: var(--flux-colors-highlight3);
+}
+
+.flux-dates-wrapper .react-datepicker__month-container {
+  background-color: var(--flux-colors-elevation2);
+  border-radius: var(--flux-radii-lg);
+}
+
+.flux-dates-wrapper .react-datepicker__day:hover {
+  background-color: var(--flux-colors-highlight1);
+}

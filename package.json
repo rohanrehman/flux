@@ -1,0 +1,43 @@
+{
+  "name": "@flux-ui/root",
+  "version": "0.0.1",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "pnpm --filter \"./packages/*\" run build",
+    "dev": "pnpm --filter \"./packages/*\" run dev",
+    "tsc": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "demo:dev": "pnpm --filter demo run dev",
+    "demo:build": "pnpm --filter demo run build",
+    "demo:serve": "pnpm --filter demo run serve",
+    "prettier": "prettier --check ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rohanrehman/flux.git"
+  },
+  "bugs": "https://github.com/rohanrehman/flux/issues",
+  "devDependencies": {
+    "lucide-preact": "^1.7.0",
+    "@types/node": "^25.5.0",
+    "pnpm": "^10.33.0",
+    "preact": "^10.29.0",
+    "prettier": "^3.8.1",
+    "tailwindcss": "^4.2.2",
+    "tsd": "^0.33.0",
+    "tsup": "^8.5.1",
+    "typescript": "catalog:",
+    "vitest": "^4.1.2"
+  },
+  "prettier": {
+    "bracketSameLine": true,
+    "semi": false,
+    "trailingComma": "es5",
+    "singleQuote": true,
+    "tabWidth": 2,
+    "printWidth": 120
+  }
+}

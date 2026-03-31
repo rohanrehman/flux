@@ -1,0 +1,61 @@
+import { useRef } from 'preact/hooks'
+import type { JSX } from 'preact'
+import { useInputContext } from '../../context'
+import { Label, Row, Chevron } from '../../components/UI'
+import { NativeSelect, PresentationalSelect, SelectContainer } from './StyledSelect'
+import type { SelectProps } from './select-types'
+
+export function Select({
+  displayValue,
+  value,
+  onUpdate,
+  id,
+  settings,
+  disabled,
+}: Pick<SelectProps, 'value' | 'displayValue' | 'onUpdate' | 'id' | 'settings' | 'disabled'>) {
+  const { keys, values } = settings
+  const lastDisplayedValue = useRef<any>()
+
+  // in case the value isn't present in values (possibly when changing options
+  // via deps), remember the last correct display value.
+  if (value === values[displayValue]) {
+    lastDisplayedValue.current = keys[displayValue]
+  }
+
+  return (
+    <SelectContainer>
+      <NativeSelect
+        id={id}
+        value={displayValue}
+        onChange={(e: JSX.TargetedEvent<HTMLSelectElement, Event>) =>
+          onUpdate(values[Number((e.currentTarget as HTMLSelectElement).value)])
+        }
+        disabled={disabled}>
+        {keys.map((key: string, index: number) => (
+          <option key={key} value={index}>
+            {key}
+          </option>
+        ))}
+      </NativeSelect>
+      <PresentationalSelect>{lastDisplayedValue.current}</PresentationalSelect>
+      <Chevron toggled />
+    </SelectContainer>
+  )
+}
+
+export function SelectComponent() {
+  const { label, value, displayValue, onUpdate, id, disabled, settings } = useInputContext<SelectProps>()
+  return (
+    <Row input>
+      <Label>{label}</Label>
+      <Select
+        id={id}
+        value={value}
+        displayValue={displayValue}
+        onUpdate={onUpdate}
+        settings={settings}
+        disabled={disabled}
+      />
+    </Row>
+  )
+}

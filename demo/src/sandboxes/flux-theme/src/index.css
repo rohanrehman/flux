@@ -1,0 +1,19 @@
+body {
+  font-family: system-ui, sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(140deg, rgb(49, 0, 227), rgb(125, 125, 125));
+  margin: 0;
+}
+
+*,
+*:after,
+*:before {
+  box-sizing: border-box;
+}
+
+pre {
+  max-width: 720px;
+  margin: 20px;
+  padding: 20px;
+  border: 10px solid black;
+}

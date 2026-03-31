@@ -1,0 +1,6 @@
+packages:
+  - packages/*
+  - demo
+
+catalog:
+  typescript: ^6.0.2

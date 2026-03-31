@@ -1,0 +1,84 @@
+import { useState } from 'preact/hooks'
+import type { ComponentChildren } from 'preact'
+import { StyledLabel, CopyLabelContainer, StyledOptionalToggle, ToolTipArrow, Tooltip } from './StyledUI'
+import { useInputContext, usePanelSettingsContext } from '../../context'
+import { FluxErrors, warn } from '../../utils'
+
+function OptionalToggle() {
+  const { id, disable, disabled } = useInputContext()
+  return (
+    <>
+      <StyledOptionalToggle
+        id={id + '__disable'}
+        type="checkbox"
+        checked={!disabled}
+        onChange={() => disable(!disabled)}
+      />
+      <label for={id + '__disable'}></label>
+    </>
+  )
+}
+
+type LabelProps = { children?: ComponentChildren; align?: 'top' }
+
+function RawLabel(props: LabelProps) {
+  const { id, optional, hint } = useInputContext()
+  const forProp = id ? id : undefined
+  const titleProp = !hint && typeof props.children === 'string' ? props.children : undefined
+
+  return (
+    <>
+      {optional && <OptionalToggle />}
+      {hint !== undefined ? (
+        <Tooltip content={<>{hint}<ToolTipArrow /></>}>
+          <StyledLabel for={forProp} title={titleProp}>{props.children}</StyledLabel>
+        </Tooltip>
+      ) : (
+        <StyledLabel for={forProp} title={titleProp}>{props.children}</StyledLabel>
+      )}
+    </>
+  )
+}
+
+export function Label({ align, ...props }: LabelProps) {
+  const { value, label, key, disabled } = useInputContext()
+  const { hideCopyButton } = usePanelSettingsContext()
+
+  const copyEnabled = !hideCopyButton && key !== undefined
+
+  const [copied, setCopied] = useState(false)
+
+  const handleClick = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify({ [key]: value ?? '' }))
+      setCopied(true)
+    } catch {
+      warn(FluxErrors.CLIPBOARD_ERROR, { [key]: value })
+    }
+  }
+
+  return (
+    <CopyLabelContainer align={align} onPointerLeave={() => setCopied(false)}>
+      <RawLabel {...props} />
+      {copyEnabled && !disabled && (
+        <div title={`Click to copy ${typeof label === 'string' ? label : key} value`}>
+          {!copied ? (
+            <svg onClick={handleClick} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+              <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+              <path
+                fillRule="evenodd"
+                d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
+        </div>
+      )}
+    </CopyLabelContainer>
+  )
+}

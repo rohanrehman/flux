@@ -1,0 +1,1369 @@
+/* ─── Default theme tokens ─────────────────────────────────────────────────── */
+
+/* [generated-theme-vars:start] */
+
+:root,
+.flux-root {
+
+  --flux-colors-elevation1: #000000;
+  --flux-colors-elevation2: #181c20;
+  --flux-colors-elevation3: #373c4b;
+  --flux-colors-accent1: #0066dc;
+  --flux-colors-accent2: #ff00d7;
+  --flux-colors-accent3: #3c93ff;
+  --flux-colors-highlight1: #535760;
+  --flux-colors-highlight2: #8c92a4;
+  --flux-colors-highlight3: #fefefe;
+  --flux-colors-highlight4: #fefefe;
+  --flux-colors-vivid1: #ffcc00;
+  --flux-colors-folderWidgetColor: var(--flux-colors-highlight2);
+  --flux-colors-folderTextColor: var(--flux-colors-highlight3);
+  --flux-colors-toolTipBackground: var(--flux-colors-highlight3);
+  --flux-colors-toolTipText: var(--flux-colors-elevation2);
+
+  --flux-radii-xs: 2px;
+  --flux-radii-sm: 3px;
+  --flux-radii-lg: 10px;
+
+  --flux-space-xs: 3px;
+  --flux-space-sm: 6px;
+  --flux-space-md: 14px;
+  --flux-space-rowGap: 7px;
+  --flux-space-colGap: 7px;
+
+  --flux-fonts-mono: ui-monospace, SFMono-Regular, Menlo, 'Roboto Mono', monospace;
+  --flux-fonts-sans: system-ui, sans-serif;
+
+  --flux-fontSizes-root: 11px;
+  --flux-fontSizes-toolTip: var(--flux-fontSizes-root);
+
+  --flux-sizes-rootWidth: 280px;
+  --flux-sizes-panelTopPadding: 10px;
+  --flux-sizes-panelBottomPadding: 10px;
+  --flux-sizes-controlWidth: 160px;
+  --flux-sizes-numberInputMinWidth: 38px;
+  --flux-sizes-scrubberWidth: 0px;
+  --flux-sizes-scrubberHeight: 0px;
+  --flux-sizes-rowHeight: 24px;
+  --flux-sizes-folderTitleHeight: 20px;
+  --flux-sizes-checkboxSize: 16px;
+  --flux-sizes-joystickWidth: 100px;
+  --flux-sizes-joystickHeight: 100px;
+  --flux-sizes-colorPickerWidth: var(--flux-sizes-controlWidth);
+  --flux-sizes-colorPickerHeight: 100px;
+  --flux-sizes-imagePreviewWidth: var(--flux-sizes-controlWidth);
+  --flux-sizes-imagePreviewHeight: 100px;
+  --flux-sizes-monitorHeight: 60px;
+  --flux-sizes-titleBarHeight: 39px;
+
+  --flux-shadows-level1: 0 0 9px 0 #00000088;
+  --flux-shadows-level2: 0 4px 14px #00000033;
+  --flux-shadows-panelX: 0px;
+  --flux-shadows-panelY: 0px;
+  --flux-shadows-panelBlur: 9px;
+  --flux-shadows-panelSpread: 0px;
+  --flux-shadows-panelColor: #00000088;
+
+  --flux-borderWidths-root: 0px;
+  --flux-borderWidths-input: 1px;
+  --flux-borderWidths-focus: 1px;
+  --flux-borderWidths-hover: 1px;
+  --flux-borderWidths-active: 1px;
+  --flux-borderWidths-folder: 1px;
+  --flux-borderWidths-graphLine: 2px;
+  --flux-borderWidths-graphShadow: 14px;
+
+  --flux-fontWeights-label: normal;
+  --flux-fontWeights-folder: normal;
+  --flux-fontWeights-button: normal;
+
+  --flux-glass-enabled: false;
+  --flux-glass-opacity: 0.6;
+  --flux-glass-blur: 12px;
+  --flux-glass-vibrancy: 1.2;
+  --flux-glass-invert: 0;
+}
+
+/* [generated-theme-vars:end] */
+
+/* ─── Internal computed aliases ─────────────────────────────────────────────── */
+
+:root,
+.flux-root {
+  --flux-title-bar-height: var(--flux-sizes-titleBarHeight);
+}
+
+/* ─── Panel root ────────────────────────────────────────────────────────────── */
+
+.flux-root,
+.flux-root *,
+.flux-root *::before,
+.flux-root *::after {
+  box-sizing: border-box;
+}
+
+.flux-root *::selection {
+  background-color: var(--flux-colors-accent2);
+}
+
+.flux-root {
+  position: relative;
+  font-family: var(--flux-fonts-mono);
+  font-size: var(--flux-fontSizes-root);
+  color: var(--flux-colors-highlight2);
+  background-color: var(--flux-colors-elevation1);
+}
+
+.flux-root--fixed {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  width: var(--flux-sizes-rootWidth);
+}
+
+.flux-root--fill {
+  position: relative;
+  width: 100%;
+}
+
+.flux-root--rounded {
+  border-radius: var(--flux-radii-lg);
+  box-shadow: var(--flux-shadows-panelX) var(--flux-shadows-panelY) var(--flux-shadows-panelBlur) var(--flux-shadows-panelSpread) var(--flux-shadows-panelColor);
+}
+
+.flux-root--glass {
+  background-color: color-mix(in srgb, var(--flux-colors-elevation2) calc(var(--flux-glass-opacity) * 100%), transparent) !important;
+  backdrop-filter: blur(var(--flux-glass-blur)) saturate(var(--flux-glass-vibrancy)) invert(var(--flux-glass-invert));
+  -webkit-backdrop-filter: blur(var(--flux-glass-blur)) saturate(var(--flux-glass-vibrancy)) invert(var(--flux-glass-invert));
+}
+
+.flux-root--glass .flux-folder-wrapper,
+.flux-root--glass .flux-title-with-filter {
+  background-color: transparent;
+}
+
+.flux-root--one-line-labels .flux-input-row {
+  grid-template-columns: auto;
+  grid-auto-columns: minmax(max-content, 1fr);
+  grid-auto-rows: minmax(var(--flux-sizes-rowHeight), auto);
+  row-gap: 0;
+  column-gap: 0;
+  margin-top: var(--flux-space-rowGap);
+}
+
+.flux-root--hide-title-bar {
+  --flux-title-bar-height: 0px;
+}
+
+/* ─── Panel dragged state ────────────────────────────────────────────────────── */
+
+.flux__panel__dragged {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body:has(.flux-inner-number-label:active),
+body:has(.flux-inner-number-label:active) * {
+  cursor: col-resize !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body:has(.flux-inner-number-label:active) input {
+  pointer-events: none;
+}
+
+.flux__panel__dragged input {
+  user-select: none;
+}
+
+.flux__panel__dragged * {
+  cursor: crosshair !important;
+}
+
+/* ─── Row ────────────────────────────────────────────────────────────────────── */
+
+.flux-row {
+  position: relative;
+  z-index: 100;
+  display: grid;
+  row-gap: var(--flux-space-rowGap);
+  grid-template-rows: minmax(var(--flux-sizes-rowHeight), max-content);
+  align-items: center;
+  color: var(--flux-colors-highlight2);
+}
+
+.flux-folder-content > .flux-row:first-of-type {
+  margin-top: var(--flux-space-rowGap);
+}
+
+.flux-folder-content > .flux-row:last-of-type {
+  margin-bottom: var(--flux-space-rowGap);
+}
+
+.flux-row--disabled {
+  pointer-events: none;
+}
+
+.flux-row:not(.flux-row--disabled):hover,
+.flux-row:not(.flux-row--disabled):focus-within {
+  color: var(--flux-colors-highlight3);
+}
+
+.flux-input-row {
+  grid-template-columns: auto var(--flux-sizes-controlWidth);
+  column-gap: var(--flux-space-colGap);
+}
+
+/* ─── Label ──────────────────────────────────────────────────────────────────── */
+
+.flux-label {
+  font-weight: var(--flux-fontWeights-label);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flux-label > svg {
+  display: block;
+}
+
+/* ─── Copy label ────────────────────────────────────────────────────────────── */
+
+.flux-copy-label-container {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.flux-copy-label-container > div {
+  margin-left: var(--flux-space-colGap);
+  padding: 0 var(--flux-space-xs);
+  opacity: 0.4;
+}
+
+.flux-copy-label-container > div:hover {
+  opacity: 0.8;
+}
+
+.flux-copy-label-container > div > svg {
+  display: none;
+  cursor: pointer;
+  width: 13px;
+  min-width: 13px;
+  height: 13px;
+  background-color: var(--flux-colors-elevation2);
+}
+
+.flux-copy-label-container:hover > div > svg {
+  display: block;
+}
+
+.flux-copy-label-container--top {
+  height: 100%;
+  align-items: flex-start;
+  padding-top: var(--flux-space-sm);
+}
+
+/* ─── Input wrapper ──────────────────────────────────────────────────────────── */
+
+.flux-input-wrapper {
+  opacity: 1;
+}
+
+.flux-input-wrapper--disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.flux-input-wrapper--disabled .flux-label {
+  pointer-events: auto;
+}
+
+/* ─── Optional toggle ────────────────────────────────────────────────────────── */
+
+.flux-optional-toggle {
+  outline: none;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  font-family: inherit;
+  border: none;
+  background-color: transparent;
+  appearance: none;
+  height: 0;
+  width: 0;
+  opacity: 0;
+  margin: 0;
+}
+
+.flux-optional-toggle + label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  user-select: none;
+  cursor: pointer;
+  padding-left: 2px;
+  padding-right: var(--flux-space-sm);
+  pointer-events: auto;
+}
+
+.flux-optional-toggle + label::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background-color: var(--flux-colors-elevation3);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-active) var(--flux-colors-accent1);
+}
+
+.flux-optional-toggle:focus + label::after {
+  box-shadow: 0 0 0 var(--flux-borderWidths-focus) var(--flux-colors-accent2);
+}
+
+.flux-optional-toggle + label:active::after {
+  background-color: var(--flux-colors-accent1);
+  box-shadow: 0 0 0 var(--flux-borderWidths-focus) var(--flux-colors-accent2);
+}
+
+.flux-optional-toggle:checked + label::after {
+  background-color: var(--flux-colors-accent1);
+}
+
+/* ─── Overlay ────────────────────────────────────────────────────────────────── */
+
+.flux-overlay {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  z-index: 1000;
+  user-select: none;
+}
+
+/* ─── Tooltip ────────────────────────────────────────────────────────────────── */
+
+.flux-tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.flux-tooltip-wrapper .flux-tooltip-content {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.1s;
+  z-index: 1000;
+}
+
+.flux-tooltip-wrapper:hover .flux-tooltip-content {
+  opacity: 1;
+  visibility: visible;
+}
+
+.flux-tooltip-content {
+  background: var(--flux-colors-toolTipBackground);
+  font-family: var(--flux-fonts-sans);
+  font-size: var(--flux-fontSizes-toolTip);
+  padding: var(--flux-space-xs) var(--flux-space-sm);
+  color: var(--flux-colors-toolTipText);
+  border-radius: var(--flux-radii-xs);
+  box-shadow: var(--flux-shadows-level2);
+  max-width: 260px;
+}
+
+.flux-tooltip-arrow {
+  width: 8px;
+  height: 4px;
+  margin: 2px auto 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid var(--flux-colors-toolTipBackground);
+}
+
+/* ─── Input container ────────────────────────────────────────────────────────── */
+
+.flux-input-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  border-radius: var(--flux-radii-sm);
+  overflow: hidden;
+  color: inherit;
+  height: var(--flux-sizes-rowHeight);
+  background-color: var(--flux-colors-elevation3);
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-input) var(--flux-colors-elevation1);
+}
+
+.flux-input-container:hover {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-hover) var(--flux-colors-accent1);
+}
+
+.flux-input-container:focus-within {
+  box-shadow: 0 0 0 var(--flux-borderWidths-focus) var(--flux-colors-accent2);
+}
+
+.flux-input-container--textarea {
+  height: auto;
+}
+
+/* ─── Input ──────────────────────────────────────────────────────────────────── */
+
+.flux-input {
+  outline: none;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  font-family: inherit;
+  border: none;
+  background-color: transparent;
+  appearance: none;
+  padding: 0 var(--flux-space-sm);
+  width: 0;
+  min-width: 0;
+  flex: 1;
+  height: 100%;
+}
+
+.flux-input--number {
+  text-align: right;
+}
+
+.flux-input--textarea {
+  padding: var(--flux-space-sm);
+}
+
+/* ─── Inner label ────────────────────────────────────────────────────────────── */
+
+.flux-inner-label {
+  touch-action: none;
+  -webkit-user-drag: none;
+  user-select: none;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 0 var(--flux-space-xs);
+  font-size: 0.8em;
+  opacity: 0.8;
+  cursor: default;
+  touch-action: none;
+}
+
+.flux-inner-label + .flux-input {
+  padding-left: 0;
+}
+
+.flux-inner-number-label {
+  cursor: col-resize;
+  margin-right: calc(-1 * var(--flux-space-xs));
+  text-transform: uppercase;
+  opacity: 0.5;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.flux-inner-number-label:hover {
+  opacity: 1;
+}
+
+.flux-inner-number-label--dragging {
+  background-color: var(--flux-colors-accent2);
+  opacity: 1;
+}
+
+/* ─── Title bar / Filter ─────────────────────────────────────────────────────── */
+
+.flux-title-with-filter {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  height: var(--flux-sizes-titleBarHeight);
+}
+
+.flux-title-with-filter--drag {
+  cursor: grab;
+}
+
+.flux-filter-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  user-select: none;
+  cursor: pointer;
+}
+
+.flux-filter-icon > svg {
+  fill: var(--flux-colors-highlight1);
+  transition: transform 350ms ease, fill 250ms ease;
+}
+
+.flux-filter-icon:hover > svg {
+  fill: var(--flux-colors-highlight3);
+}
+
+.flux-filter-icon--active > svg {
+  fill: var(--flux-colors-highlight2);
+}
+
+.flux-filter-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  transition: height 250ms ease;
+  color: var(--flux-colors-highlight3);
+  padding-left: var(--flux-space-md);
+  height: 0;
+}
+
+.flux-filter-wrapper--toggled {
+  height: 30px;
+}
+
+.flux-filter-wrapper > .flux-filter-icon {
+  height: 30px;
+}
+
+.flux-filter-input {
+  outline: none;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  font-family: inherit;
+  border: none;
+  background-color: transparent;
+  appearance: none;
+  flex: 1;
+  position: relative;
+  height: 30px;
+  width: 100%;
+  font-size: 10px;
+  border-radius: var(--flux-borderWidths-root);
+}
+
+.flux-filter-input::placeholder {
+  color: var(--flux-colors-highlight2);
+}
+
+.flux-title-container {
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--flux-colors-highlight1);
+}
+
+.flux-title-container > svg {
+  fill: var(--flux-colors-highlight1);
+}
+
+.flux-title-container--draggable {
+  touch-action: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.flux-title-container--draggable > svg {
+  transition: fill 250ms ease;
+}
+
+.flux-title-container--draggable:hover {
+  color: var(--flux-colors-highlight3);
+}
+
+.flux-title-container--draggable:hover > svg {
+  fill: var(--flux-colors-highlight3);
+}
+
+.flux-title-container--no-filter {
+  padding-right: 40px;
+}
+
+/* ─── Button ─────────────────────────────────────────────────────────────────── */
+
+.flux-button {
+  display: block;
+  outline: none;
+  font-size: inherit;
+  font-weight: var(--flux-fontWeights-button);
+  color: inherit;
+  font-family: inherit;
+  border: none;
+  background-color: transparent;
+  appearance: none;
+  height: var(--flux-sizes-rowHeight);
+  border-style: none;
+  border-radius: var(--flux-radii-sm);
+  background-color: var(--flux-colors-elevation1);
+  color: var(--flux-colors-highlight1);
+}
+
+.flux-button:not(:disabled) {
+  color: var(--flux-colors-highlight3);
+  background-color: var(--flux-colors-accent2);
+  cursor: pointer;
+}
+
+.flux-button:not(:disabled):hover {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-hover) var(--flux-colors-accent3);
+}
+
+.flux-button:not(:disabled):active {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-active) var(--flux-colors-accent3);
+  background-color: var(--flux-colors-accent1);
+}
+
+.flux-button:not(:disabled):focus {
+  box-shadow: 0 0 0 var(--flux-borderWidths-focus) var(--flux-colors-accent2);
+}
+
+/* ─── Button group ───────────────────────────────────────────────────────────── */
+
+.flux-button-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--flux-space-colGap);
+}
+
+.flux-button-group-button {
+  outline: none;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  font-family: inherit;
+  border: none;
+  background-color: transparent;
+  appearance: none;
+  cursor: pointer;
+  border-radius: var(--flux-radii-xs);
+}
+
+.flux-button-group-button:hover {
+  background-color: var(--flux-colors-elevation3);
+}
+
+/* ─── Folder ─────────────────────────────────────────────────────────────────── */
+
+.flux-folder-wrapper {
+  position: relative;
+  background: var(--flux-colors-elevation2);
+  transition: height 300ms ease;
+}
+
+.flux-folder-wrapper--nested {
+  padding-left: var(--flux-space-md);
+}
+
+.flux-folder-wrapper--nested::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--flux-borderWidths-folder);
+  height: 100%;
+  background-color: var(--flux-colors-folderWidgetColor);
+  opacity: 0.4;
+  transform: translateX(-50%);
+}
+
+.flux-folder-wrapper--root {
+  overflow-y: auto;
+  max-height: calc(100vh - 20px - var(--flux-title-bar-height));
+}
+
+.flux-folder-wrapper--root.flux-folder-wrapper--rounded {
+  border-radius: var(--flux-radii-lg);
+}
+
+/* ─── Folder title ───────────────────────────────────────────────────────────── */
+
+.flux-folder-title {
+  display: flex;
+  align-items: center;
+  color: var(--flux-colors-folderTextColor);
+  user-select: none;
+  cursor: pointer;
+  height: var(--flux-sizes-folderTitleHeight);
+  font-weight: var(--flux-fontWeights-folder);
+}
+
+.flux-folder-title > svg {
+  margin-left: -4px;
+  margin-right: 4px;
+  cursor: pointer;
+  fill: var(--flux-colors-folderWidgetColor);
+  opacity: 0.6;
+}
+
+.flux-folder-title:hover > svg {
+  fill: var(--flux-colors-folderWidgetColor);
+}
+
+.flux-folder-title:hover + .flux-folder-wrapper::after {
+  opacity: 0.6;
+}
+
+.flux-folder:hover > .flux-folder-title + .flux-folder-wrapper::after {
+  opacity: 0.6;
+}
+
+.flux-folder:hover > .flux-folder-title > svg {
+  opacity: 1;
+}
+
+/* ─── Folder content ─────────────────────────────────────────────────────────── */
+
+.flux-folder-content {
+  position: relative;
+  display: grid;
+  grid-template-columns: 100%;
+  row-gap: var(--flux-space-rowGap);
+  transition: opacity 250ms ease;
+}
+
+.flux-folder-content--open {
+  opacity: 1;
+  transition-delay: 250ms;
+}
+
+.flux-folder-content--closed {
+  opacity: 0;
+  transition-delay: 0ms;
+  pointer-events: none;
+}
+
+.flux-folder-content--root > div {
+  padding-left: var(--flux-space-md);
+  padding-right: var(--flux-space-md);
+}
+
+.flux-folder-content--root > div:first-of-type {
+  padding-top: var(--flux-sizes-panelTopPadding);
+}
+
+.flux-folder-content--root > div:last-of-type {
+  padding-bottom: var(--flux-sizes-panelBottomPadding);
+}
+
+.flux-folder-content--root > .flux-folder:not(:first-of-type) {
+  padding-top: var(--flux-space-sm);
+  margin-top: var(--flux-space-md);
+  border-top: var(--flux-borderWidths-folder) solid var(--flux-colors-elevation1);
+}
+
+/* ─── Monitor canvas ─────────────────────────────────────────────────────────── */
+
+.flux-monitor-canvas {
+  height: var(--flux-sizes-monitorHeight);
+  width: 100%;
+  display: block;
+  border-radius: var(--flux-radii-sm);
+}
+
+/* ─── Chevron ────────────────────────────────────────────────────────────────── */
+
+.flux-chevron {
+  fill: currentColor;
+  transition: transform 350ms ease, fill 250ms ease;
+}
+
+/* ─── Boolean ────────────────────────────────────────────────────────────────── */
+
+.flux-boolean-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--flux-sizes-rowHeight);
+}
+
+.flux-boolean-wrapper input {
+  outline: none;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  font-family: inherit;
+  border: none;
+  background-color: transparent;
+  appearance: none;
+  height: 0;
+  width: 0;
+  opacity: 0;
+  margin: 0;
+}
+
+.flux-boolean-wrapper label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  cursor: pointer;
+  height: var(--flux-sizes-checkboxSize);
+  width: var(--flux-sizes-checkboxSize);
+  background-color: var(--flux-colors-elevation3);
+  border-radius: var(--flux-radii-sm);
+}
+
+.flux-boolean-wrapper label:hover {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-hover) var(--flux-colors-accent1);
+}
+
+.flux-boolean-wrapper input:focus + label {
+  box-shadow: 0 0 0 var(--flux-borderWidths-focus) var(--flux-colors-accent2);
+}
+
+.flux-boolean-wrapper input:focus:checked + label,
+.flux-boolean-wrapper input:checked + label:hover {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-hover) var(--flux-colors-accent3);
+}
+
+.flux-boolean-wrapper input + label:active {
+  background-color: var(--flux-colors-accent1);
+}
+
+.flux-boolean-wrapper input:checked + label:active {
+  background-color: var(--flux-colors-accent1);
+}
+
+.flux-boolean-wrapper label > svg {
+  display: none;
+  width: 90%;
+  height: 90%;
+  stroke: var(--flux-colors-highlight3);
+}
+
+.flux-boolean-wrapper input:checked + label {
+  background-color: var(--flux-colors-accent2);
+}
+
+.flux-boolean-wrapper input:checked + label > svg {
+  display: block;
+}
+
+/* ─── Color ──────────────────────────────────────────────────────────────────── */
+
+.flux-color-preview {
+  position: relative;
+  box-sizing: border-box;
+  border-radius: var(--flux-radii-sm);
+  overflow: hidden;
+  cursor: pointer;
+  height: var(--flux-sizes-rowHeight);
+  width: var(--flux-sizes-rowHeight);
+  background-color: #fff;
+  background-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill-opacity=".05"><path d="M8 0h8v8H8zM0 8h8v8H0z"/></svg>');
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-input) var(--flux-colors-highlight1);
+  z-index: 1;
+}
+
+.flux-color-preview:hover {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-hover) var(--flux-colors-accent1);
+}
+
+.flux-color-preview--active {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-input) var(--flux-colors-accent1);
+}
+
+.flux-color-preview::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  background-color: currentColor;
+  z-index: 1;
+}
+
+.flux-color-picker-container {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--flux-sizes-rowHeight) auto;
+  column-gap: var(--flux-space-colGap);
+  align-items: center;
+}
+
+/* ─── Color Picker base (inline react-colorful replacement) ──────────────── */
+
+.react-colorful {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+  height: 200px;
+  user-select: none;
+  cursor: default;
+}
+
+.react-colorful__saturation {
+  position: relative;
+  flex-grow: 1;
+  border-radius: 8px 8px 0 0;
+  background-image: linear-gradient(0deg, #000, transparent), linear-gradient(90deg, #fff, rgba(255, 255, 255, 0));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.react-colorful__alpha,
+.react-colorful__hue {
+  position: relative;
+  height: 24px;
+}
+
+.react-colorful__hue {
+  background: linear-gradient(90deg, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
+}
+
+.react-colorful__last-control {
+  border-radius: 0 0 8px 8px;
+}
+
+.react-colorful__interactive {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  outline: none;
+  touch-action: none;
+}
+
+.react-colorful__pointer {
+  position: absolute;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  transform: translate(-50%, -50%);
+  background-color: #fff;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.react-colorful__pointer-fill,
+.react-colorful__alpha-gradient {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.react-colorful__alpha {
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill-opacity='.2'><path d='M8 0h8v8H8zM0 8h8v8H0z'/></svg>");
+}
+
+/* ─── Color Picker wrapper overrides ─────────────────────────────────────── */
+
+.flux-color-picker-wrapper {
+  width: var(--flux-sizes-colorPickerWidth);
+  height: var(--flux-sizes-colorPickerHeight);
+}
+
+.flux-color-picker-wrapper .react-colorful {
+  width: 100%;
+  height: 100%;
+  box-shadow: var(--flux-shadows-level2);
+  cursor: crosshair;
+}
+
+.flux-color-picker-wrapper .react-colorful__saturation {
+  border-radius: var(--flux-radii-sm) var(--flux-radii-sm) 0 0;
+}
+
+.flux-color-picker-wrapper .react-colorful__alpha,
+.flux-color-picker-wrapper .react-colorful__hue {
+  height: 10px;
+}
+
+.flux-color-picker-wrapper .react-colorful__last-control {
+  border-radius: 0 0 var(--flux-radii-sm) var(--flux-radii-sm);
+}
+
+.flux-color-picker-wrapper .react-colorful__pointer {
+  height: 12px;
+  width: 12px;
+}
+
+/* ─── Image ──────────────────────────────────────────────────────────────────── */
+
+.flux-image-container {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--flux-sizes-rowHeight) auto 20px;
+  column-gap: var(--flux-space-colGap);
+  align-items: center;
+}
+
+.flux-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  height: var(--flux-sizes-rowHeight);
+  background: var(--flux-colors-elevation3);
+  text-align: center;
+  color: inherit;
+  border-radius: var(--flux-radii-sm);
+  outline: none;
+  user-select: none;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-input) var(--flux-colors-highlight1);
+}
+
+.flux-dropzone:hover {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-hover) var(--flux-colors-accent1);
+}
+
+.flux-dropzone:focus-within {
+  box-shadow: 0 0 0 var(--flux-borderWidths-focus) var(--flux-colors-accent2);
+}
+
+.flux-dropzone:active {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-active) var(--flux-colors-accent1);
+  background-color: var(--flux-colors-elevation1);
+}
+
+.flux-dropzone--accept {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-input) var(--flux-colors-accent1);
+  background-color: var(--flux-colors-elevation1);
+}
+
+.flux-image-preview {
+  box-sizing: border-box;
+  border-radius: var(--flux-radii-sm);
+  height: var(--flux-sizes-rowHeight);
+  width: var(--flux-sizes-rowHeight);
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-input) var(--flux-colors-highlight1);
+  background-size: cover;
+  background-position: center;
+}
+
+.flux-image-preview--has-image {
+  cursor: pointer;
+}
+
+.flux-image-preview--has-image:hover {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-hover) var(--flux-colors-accent1);
+}
+
+.flux-image-preview--has-image:active {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-active) var(--flux-colors-accent1);
+}
+
+.flux-image-large-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--flux-sizes-imagePreviewWidth);
+  height: var(--flux-sizes-imagePreviewHeight);
+  border-radius: var(--flux-radii-sm);
+  box-shadow: var(--flux-shadows-level2);
+  pointer-events: none;
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-input) var(--flux-colors-highlight1);
+  background-size: cover;
+  background-position: center;
+}
+
+.flux-image-instructions {
+  font-size: 0.8em;
+  height: 100%;
+  padding: var(--flux-space-rowGap) var(--flux-space-md);
+}
+
+.flux-image-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  top: 0;
+  right: 0;
+  margin-right: var(--flux-space-sm);
+  height: 100%;
+  cursor: pointer;
+  position: relative;
+}
+
+.flux-image-remove--disabled {
+  color: var(--flux-colors-elevation3);
+  cursor: default;
+}
+
+.flux-image-remove::after,
+.flux-image-remove::before {
+  content: '';
+  position: absolute;
+  height: 2px;
+  width: 10px;
+  border-radius: 1px;
+  background-color: currentColor;
+}
+
+.flux-image-remove::after {
+  transform: rotate(45deg);
+}
+
+.flux-image-remove::before {
+  transform: rotate(-45deg);
+}
+
+/* ─── Number / Range ─────────────────────────────────────────────────────────── */
+
+.flux-range-grid--has-range {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto var(--flux-sizes-numberInputMinWidth);
+  column-gap: var(--flux-space-colGap);
+  align-items: center;
+}
+
+.flux-range {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  border-radius: var(--flux-radii-xs);
+  background-color: var(--flux-colors-elevation1);
+}
+
+.flux-scrubber {
+  position: absolute;
+  width: var(--flux-sizes-scrubberWidth);
+  height: var(--flux-sizes-scrubberHeight);
+  border-radius: var(--flux-radii-xs);
+  box-shadow: 0 0 0 2px var(--flux-colors-elevation2);
+  background-color: var(--flux-colors-accent2);
+  cursor: pointer;
+}
+
+.flux-scrubber:active {
+  background-color: var(--flux-colors-accent1);
+}
+
+.flux-scrubber:hover {
+  background-color: var(--flux-colors-accent3);
+}
+
+.flux-scrubber--left {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  transform: translateX(calc(-0.5 * (var(--flux-sizes-scrubberWidth) + 4px)));
+}
+
+.flux-scrubber--right {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  transform: translateX(calc(0.5 * (var(--flux-sizes-scrubberWidth) + 4px)));
+}
+
+.flux-range-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.flux-indicator {
+  position: absolute;
+  height: 100%;
+  background-color: var(--flux-colors-accent2);
+}
+
+/* ─── Select ─────────────────────────────────────────────────────────────────── */
+
+.flux-select-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.flux-select-container > svg {
+  pointer-events: none;
+  position: absolute;
+  right: var(--flux-space-md);
+}
+
+.flux-native-select {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+}
+
+.flux-presentational-select {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: var(--flux-sizes-rowHeight);
+  background-color: var(--flux-colors-elevation3);
+  border-radius: var(--flux-radii-sm);
+  padding: 0 var(--flux-space-sm);
+  cursor: pointer;
+}
+
+.flux-native-select:focus + .flux-presentational-select {
+  box-shadow: 0 0 0 var(--flux-borderWidths-focus) var(--flux-colors-accent2);
+}
+
+.flux-native-select:hover + .flux-presentational-select {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-hover) var(--flux-colors-accent1);
+}
+
+/* ─── Joystick ───────────────────────────────────────────────────────────────── */
+
+.flux-joystick-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background-color: var(--flux-colors-elevation3);
+  border-radius: var(--flux-radii-sm);
+  cursor: pointer;
+  height: var(--flux-sizes-rowHeight);
+  width: var(--flux-sizes-rowHeight);
+  touch-action: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.flux-joystick-trigger:hover {
+  box-shadow: inset 0 0 0 var(--flux-borderWidths-hover) var(--flux-colors-accent1);
+}
+
+.flux-joystick-trigger:active {
+  cursor: none;
+}
+
+.flux-joystick-trigger::after {
+  content: '';
+  background-color: var(--flux-colors-accent2);
+  height: 4px;
+  width: 4px;
+  border-radius: 2px;
+}
+
+.flux-joystick-playground {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--flux-sizes-joystickWidth);
+  height: var(--flux-sizes-joystickHeight);
+  border-radius: var(--flux-radii-sm);
+  box-shadow: var(--flux-shadows-level2);
+  position: fixed;
+  z-index: 10000;
+  overflow: hidden;
+  touch-action: none;
+  -webkit-user-drag: none;
+  user-select: none;
+  transform: translate(-50%, -50%);
+  background-color: var(--flux-colors-elevation3);
+}
+
+.flux-joystick-playground--out-of-bounds {
+  background-color: var(--flux-colors-elevation1);
+}
+
+.flux-joystick-playground > div {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--flux-colors-highlight1);
+  background-color: var(--flux-colors-elevation3);
+  width: 80%;
+  height: 80%;
+}
+
+.flux-joystick-playground > div::after,
+.flux-joystick-playground > div::before {
+  content: '';
+  position: absolute;
+  z-index: 10;
+  background-color: var(--flux-colors-highlight1);
+}
+
+.flux-joystick-playground > div::before {
+  width: 100%;
+  height: 1px;
+}
+
+.flux-joystick-playground > div::after {
+  height: 100%;
+  width: 1px;
+}
+
+.flux-joystick-playground > span {
+  position: relative;
+  z-index: 100;
+  width: 10px;
+  height: 10px;
+  background-color: var(--flux-colors-accent2);
+  border-radius: 50%;
+}
+
+/* ─── Vector containers ──────────────────────────────────────────────────────── */
+
+.flux-vector-container {
+  display: grid;
+  column-gap: var(--flux-space-colGap);
+  grid-auto-flow: column dense;
+  align-items: center;
+}
+
+.flux-vector-container--with-lock {
+  grid-template-columns: 10px auto;
+}
+
+.flux-vector-container--with-lock > svg {
+  cursor: pointer;
+}
+
+.flux-vector2d-container {
+  display: grid;
+  column-gap: var(--flux-space-colGap);
+  grid-template-columns: auto;
+}
+
+.flux-vector2d-container--with-joystick {
+  grid-template-columns: var(--flux-sizes-rowHeight) auto;
+}
+
+.flux-interval-container {
+  display: grid;
+  column-gap: var(--flux-space-colGap);
+  grid-template-columns: auto calc(var(--flux-sizes-numberInputMinWidth) * 2 + var(--flux-space-rowGap));
+}
+
+/* ─── String ─────────────────────────────────────────────────────────────────── */
+
+.flux-non-editable-string {
+  white-space: pre-wrap;
+}

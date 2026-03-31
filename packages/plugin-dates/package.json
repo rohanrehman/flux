@@ -1,0 +1,35 @@
+{
+  "name": "@flux-ui/plugin-dates",
+  "version": "0.10.1",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rohanrehman/flux.git",
+    "directory": "packages/plugin-dates"
+  },
+  "bugs": "https://github.com/rohanrehman/flux/issues",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "peerDependencies": {
+    "flux": ">=0.10.1",
+    "preact": "^10.0.0"
+  },
+  "dependencies": {
+    "react-datepicker": "^9.1.0"
+  },
+  "devDependencies": {
+    "@types/react-datepicker": "^7.0.0",
+    "@rohanrehman/flux": "workspace:*"
+  }
+}

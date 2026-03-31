@@ -1,0 +1,57 @@
+{
+  "name": "@rohanrehman/flux",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./plugin": {
+      "import": "./dist/plugin.js",
+      "types": "./dist/plugin.d.ts"
+    },
+    "./headless": {
+      "import": "./dist/headless.js",
+      "types": "./dist/headless.d.ts"
+    },
+    "./dist/flux.css": "./dist/flux.css",
+    "./dist/flux.core.css": "./dist/flux.core.css"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/flux.css",
+    "dist/flux.core.css"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rohanrehman/flux.git",
+    "directory": "packages/flux"
+  },
+  "bugs": "https://github.com/rohanrehman/flux/issues",
+  "scripts": {
+    "build:js": "tsup",
+    "build:css": "node scripts/generate-theme-css.ts && tailwindcss --input src/styles/flux.css --output dist/flux.css --minify && tailwindcss --input src/styles/flux.core.css --output dist/flux.core.css --minify",
+    "build": "pnpm build:js && pnpm build:css",
+    "dev": "tsup --watch"
+  },
+  "peerDependencies": {
+    "preact": "^10.0.0"
+  },
+  "dependencies": {
+    "colord": "^2.9.3",
+    "dequal": "^2.0.3",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.2",
+    "@welldone-software/why-did-you-render": "^10.0.1"
+  }
+}

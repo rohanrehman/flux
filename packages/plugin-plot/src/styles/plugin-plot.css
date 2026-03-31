@@ -1,0 +1,58 @@
+.flux-plot-wrapper {
+  position: relative;
+  height: 80px;
+  width: 100%;
+  margin-bottom: var(--flux-space-sm);
+}
+
+.flux-plot-tooltip {
+  position: absolute;
+  top: -4px;
+  pointer-events: none;
+  font-family: var(--flux-fonts-mono);
+  font-size: calc(var(--flux-fontSizes-root) * 0.9);
+  padding: var(--flux-space-xs) var(--flux-space-sm);
+  color: var(--flux-colors-toolTipBackground);
+  background-color: var(--flux-colors-toolTipText);
+  border-radius: var(--flux-radii-xs);
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+  box-shadow: var(--flux-shadows-level2);
+}
+
+.flux-plot-canvas {
+  height: 100%;
+  width: 100%;
+}
+
+.flux-plot-dot {
+  position: absolute;
+  height: 6px;
+  width: 6px;
+  border-radius: 6px;
+  background-color: var(--flux-colors-highlight4);
+  pointer-events: none;
+}
+
+.flux-plot-inner-label {
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 14px;
+  width: 14px;
+  border-radius: 7px;
+  margin-right: var(--flux-space-sm);
+  cursor: pointer;
+  font-size: 0.8em;
+}
+
+.flux-plot-inner-label--graph {
+  background-color: var(--flux-colors-elevation1);
+}
+
+.flux-plot-container {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
