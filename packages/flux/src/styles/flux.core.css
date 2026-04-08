@@ -95,6 +95,27 @@
 
 /* ─── Panel root ────────────────────────────────────────────────────────────── */
 
+/*
+ * The host element appended to <body> by PanelLifecycle.createPanel().
+ * Must be zero-footprint so it never contributes to documentElement.scrollHeight.
+ * position:fixed + width/height:0 keeps it out of document flow entirely while
+ * still allowing the absolutely/fixed-positioned .flux-root child to paint.
+ */
+#flux__root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+#flux__root > * {
+  pointer-events: auto;
+}
+
 .flux-root,
 .flux-root *,
 .flux-root *::before,
@@ -112,6 +133,7 @@
   font-size: var(--flux-fontSizes-root);
   color: var(--flux-colors-highlight2);
   background-color: var(--flux-colors-elevation1);
+  overflow: hidden;
 }
 
 .flux-root--fixed {
@@ -134,8 +156,8 @@
 
 .flux-root--glass {
   background-color: color-mix(in srgb, var(--flux-colors-elevation2) calc(var(--flux-glass-opacity) * 100%), transparent) !important;
-  backdrop-filter: blur(var(--flux-glass-blur)) saturate(var(--flux-glass-vibrancy)) invert(var(--flux-glass-invert)) !important;
-  -webkit-backdrop-filter: blur(var(--flux-glass-blur)) saturate(var(--flux-glass-vibrancy)) invert(var(--flux-glass-invert)) !important;
+  backdrop-filter: blur(var(--flux-glass-blur, 12px)) saturate(var(--flux-glass-vibrancy, 1.2)) invert(var(--flux-glass-invert, 0));
+  -webkit-backdrop-filter: blur(var(--flux-glass-blur, 12px)) saturate(var(--flux-glass-vibrancy, 1.2)) invert(var(--flux-glass-invert, 0));
 }
 
 .flux-root--glass .flux-folder-wrapper,

@@ -1,7 +1,24 @@
-import { useEffect, useCallback, useState } from 'preact/hooks'
+import { useEffect, useCallback, useState, useRef } from 'preact/hooks'
 import { folder, Flux, useControls, FluxPanel, useCreateStore, button } from 'flux'
-import { useDrag } from '@use-gesture/react'
 import './styles.css'
+
+function useDrag(handler) {
+  const state = useRef({ active: false, startX: 0, startY: 0, memo: undefined })
+  return useCallback((...args) => ({
+    onPointerDown(e) {
+      e.currentTarget.setPointerCapture(e.pointerId)
+      state.current = { active: true, startX: e.clientX, startY: e.clientY, memo: undefined }
+      state.current.memo = handler({ first: true, movement: [0, 0], args, memo: undefined })
+    },
+    onPointerMove(e) {
+      if (!state.current.active) return
+      const mx = e.clientX - state.current.startX
+      const my = e.clientY - state.current.startY
+      state.current.memo = handler({ first: false, movement: [mx, my], args, memo: state.current.memo })
+    },
+    onPointerUp() { state.current.active = false },
+  }), [handler])
+}
 
 function useDropzone({ onDrop } = {}) {
   const [isDragAccept, setIsDragAccept] = useState(false)
