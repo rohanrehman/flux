@@ -20,7 +20,7 @@ export function getStep(number: number) {
   const significantDigits = Math.floor(Math.log(n) / log10) + 1
   const numberLog = Math.floor(Math.log10(Math.abs(number)))
   const step = Math.pow(10, numberLog - significantDigits)
-  return Math.max(step, 0.001)
+  return step
 }
 
 export const range = (v: number, min: number, max: number) => {

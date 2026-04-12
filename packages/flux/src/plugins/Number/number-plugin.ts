@@ -25,17 +25,19 @@ export const format = (v: any, { pad = 0, suffix }: InternalNumberSettings) => {
   return suffix ? f + suffix : f
 }
 
+function countDecimals(n: number): number {
+  const s = String(n)
+  if (s.includes('e-')) return parseInt(s.split('e-')[1])
+  const dot = s.indexOf('.')
+  return dot === -1 ? 0 : s.length - dot - 1
+}
+
 export const normalize = ({ value, ...settings }: NumberInput) => {
   const { min = -Infinity, max = Infinity, ..._settings } = settings
 
   let _value = parseFloat(value as string)
   const suffix = typeof value === 'string' ? value.substring(('' + _value).length) : undefined
   _value = clamp(_value, min, max)
-
-  // ideally:
-  // 3 -> 3.0
-  // { value: 10, step: 0.2 } -> 10.0
-  // { value: 10, step: 0.25 } -> 10.00
 
   let step = settings.step
   if (!step) {
@@ -44,10 +46,10 @@ export const normalize = ({ value, ...settings }: NumberInput) => {
       else step = +(Math.abs(_value - min!) / 100).toPrecision(1)
     else if (Number.isFinite(max)) step = +(Math.abs(max! - _value) / 100).toPrecision(1)
   }
-  // padStep should be based on step first
   const padStep = step ? getStep(step) * 10 : getStep(_value)
   step = step || padStep / 10
-  const pad = Math.round(clamp(Math.log10(1 / padStep), 0, 2))
+  // derive pad directly from step's decimal places so small steps like 0.0001 → pad 4
+  const pad = step ? countDecimals(step) : Math.round(clamp(Math.log10(1 / padStep), 0, 10))
 
   return {
     value: suffix ? _value + suffix : _value,
@@ -61,5 +63,7 @@ export const sanitizeStep = (
   { step, initialValue }: Pick<InternalNumberSettings, 'step' | 'initialValue'>
 ) => {
   const steps = Math.round((v - initialValue) / step)
-  return initialValue + steps * step!
+  const result = initialValue + steps * step!
+  const dec = countDecimals(step)
+  return parseFloat(result.toFixed(dec))
 }

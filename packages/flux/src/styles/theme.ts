@@ -44,7 +44,7 @@ export function getDefaultTheme() {
       panelTopPadding: '10px',
       panelBottomPadding: '10px',
       controlWidth: '160px',
-      numberInputMinWidth: '38px',
+      numberInputMinWidth: '52px',
       scrubberWidth: '0px',
       scrubberHeight: '0px',
       rowHeight: '24px',

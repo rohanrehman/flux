@@ -18,6 +18,7 @@ function Controls() {
 
   useControls({
     number: { value: 10, step: 0.25 },
+    fine: { value: 0.0001, min: 0, max: 0.001, step: 0.0001 },
     image: { image: undefined },
     select: { options: ['x', 'y', ['x', 'y']] },
     interval: { min: -100, max: 100, value: [10, 15] },
