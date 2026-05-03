@@ -1,4 +1,5 @@
-import { useRef, useCallback } from 'preact/hooks'
+// Phaze migration: components run once, so handler/state refs collapse
+// to plain locals; useCallback ceremony disappears (Patterns 3, 5).
 
 export type MoveState = {
   xy: [number, number]
@@ -6,26 +7,21 @@ export type MoveState = {
 }
 
 export function usePointerMove(handler: (state: MoveState) => void) {
-  const handlerRef = useRef(handler)
-  handlerRef.current = handler
-  const active = useRef(false)
+  let active = false
 
-  const onPointerEnter = useCallback((e: PointerEvent) => {
-    active.current = true
-    handlerRef.current({ xy: [e.clientX, e.clientY], first: true })
-  }, [])
+  const onPointerEnter = (e: PointerEvent) => {
+    active = true
+    handler({ xy: [e.clientX, e.clientY], first: true })
+  }
 
-  const onPointerMove = useCallback((e: PointerEvent) => {
-    if (!active.current) return
-    handlerRef.current({ xy: [e.clientX, e.clientY], first: false })
-  }, [])
+  const onPointerMove = (e: PointerEvent) => {
+    if (!active) return
+    handler({ xy: [e.clientX, e.clientY], first: false })
+  }
 
-  const onPointerLeave = useCallback(() => {
-    active.current = false
-  }, [])
+  const onPointerLeave = () => {
+    active = false
+  }
 
-  return useCallback(
-    () => ({ onPointerEnter, onPointerMove, onPointerLeave }),
-    [onPointerEnter, onPointerMove, onPointerLeave]
-  )
+  return () => ({ onPointerEnter, onPointerMove, onPointerLeave })
 }

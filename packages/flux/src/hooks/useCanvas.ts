@@ -1,29 +1,41 @@
-import { useEffect, useRef } from 'preact/hooks'
-import type { RefObject } from 'preact'
+import { signal, effect, cleanup } from '@madenowhere/phaze'
+import type { Signal } from '@madenowhere/phaze'
 import { debounce } from '../utils'
 
+/**
+ * Canvas + 2D context refs paired with a resize-aware redraw loop.
+ *
+ * Phaze migration: refs are signals so consumers can pass them directly to
+ * `<canvas ref={canvas} />`; the effect runs once at scope creation and
+ * re-fires whenever the canvas element is wired (signal change). Cleanup
+ * detaches the resize listener.
+ */
 export function useCanvas2d(
-  fn: Function
-): [RefObject<HTMLCanvasElement | null>, RefObject<CanvasRenderingContext2D | null>] {
-  const canvas = useRef<HTMLCanvasElement | null>(null)
-  const ctx = useRef<CanvasRenderingContext2D | null>(null)
-  const hasFired = useRef(false)
+  fn: (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => void
+): [Signal<HTMLCanvasElement | undefined>, Signal<CanvasRenderingContext2D | undefined>] {
+  const canvas = signal<HTMLCanvasElement>()
+  const ctx = signal<CanvasRenderingContext2D | undefined>()
+  let hasFired = false
 
-  useEffect(() => {
+  effect(() => {
+    const el = canvas()
+    if (!el) return
+
     const handleCanvas = debounce(() => {
-      if (!canvas.current) return
-      canvas.current.width = canvas.current.offsetWidth * window.devicePixelRatio
-      canvas.current.height = canvas.current.offsetHeight * window.devicePixelRatio
-      ctx.current = canvas.current.getContext('2d')
-      fn(canvas.current, ctx.current)
+      el.width = el.offsetWidth * window.devicePixelRatio
+      el.height = el.offsetHeight * window.devicePixelRatio
+      const c = el.getContext('2d')
+      ctx.set(c ?? undefined)
+      if (c) fn(el, c)
     }, 250)
-    window.addEventListener('resize', handleCanvas)
-    if (!hasFired.current) {
-      handleCanvas()
-      hasFired.current = true
-    }
-    return () => window.removeEventListener('resize', handleCanvas)
-  }, [fn])
 
-  return [canvas, ctx]
+    window.addEventListener('resize', handleCanvas)
+    if (!hasFired) {
+      handleCanvas()
+      hasFired = true
+    }
+    cleanup(() => window.removeEventListener('resize', handleCanvas))
+  })
+
+  return [canvas, ctx as Signal<CanvasRenderingContext2D | undefined>]
 }

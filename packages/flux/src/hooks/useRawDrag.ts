@@ -1,4 +1,6 @@
-import { useRef, useCallback } from 'preact/hooks'
+// Phaze migration: useRef-only hook collapses entirely to plain locals
+// since phaze components run once. The mutable drag state, handler ref,
+// and config ref all become module-scope-style locals (Pattern 5).
 
 export type DragState = {
   first: boolean
@@ -20,63 +22,58 @@ export type DragConfig = {
 const TAP_THRESHOLD = 3
 
 export function useRawDrag(handler: (state: DragState) => any, config: DragConfig = {}) {
-  // Keep handler and config fresh without recreating event handlers on every render
-  const handlerRef = useRef(handler)
-  handlerRef.current = handler
-  const configRef = useRef(config)
-  configRef.current = config
-
-  // All mutable drag state in one ref — no stale closure risk
-  const g = useRef({
+  // All mutable drag state in one bag — closures over these locals are
+  // stable for the scope's lifetime since phaze components run once.
+  const g = {
     active: false,
     started: false,
     startXY: [0, 0] as [number, number],
     lastXY: [0, 0] as [number, number],
     offset: [0, 0] as [number, number], // persists between drag sessions
-    from: [0, 0] as [number, number],   // resolved at drag start
+    from: [0, 0] as [number, number], // resolved at drag start
     memo: undefined as any,
-  })
+  }
 
-  const onPointerDown = useCallback((e: PointerEvent) => {
-    const { filterTaps = false, from } = configRef.current
+  const onPointerDown = (e: PointerEvent) => {
+    const { filterTaps = false, from } = config
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
 
-    g.current.active = true
-    g.current.started = false
-    g.current.memo = undefined
-    g.current.startXY = [e.clientX, e.clientY]
-    g.current.lastXY = [e.clientX, e.clientY]
-    g.current.from = from
-      ? from({ offset: g.current.offset })
-      : ([...g.current.offset] as [number, number])
+    g.active = true
+    g.started = false
+    g.memo = undefined
+    g.startXY = [e.clientX, e.clientY]
+    g.lastXY = [e.clientX, e.clientY]
+    g.from = from
+      ? from({ offset: g.offset })
+      : ([...g.offset] as [number, number])
 
     if (!filterTaps) {
-      g.current.started = true
-      g.current.memo = handlerRef.current({
+      g.started = true
+      g.memo = handler({
         first: true, last: false, active: true,
         delta: [0, 0], movement: [0, 0],
         xy: [e.clientX, e.clientY],
-        offset: [...g.current.from] as [number, number],
+        offset: [...g.from] as [number, number],
         event: e, memo: undefined,
       })
     }
-  }, [])
+  }
 
-  const onPointerMove = useCallback((e: PointerEvent) => {
-    if (!g.current.active) return
+  const onPointerMove = (e: PointerEvent) => {
+    if (!g.active) return
 
-    const mx = e.clientX - g.current.startXY[0]
-    const my = e.clientY - g.current.startXY[1]
-    const dx = e.clientX - g.current.lastXY[0]
-    const dy = e.clientY - g.current.lastXY[1]
-    g.current.lastXY = [e.clientX, e.clientY]
+    const mx = e.clientX - g.startXY[0]
+    const my = e.clientY - g.startXY[1]
+    const dx = e.clientX - g.lastXY[0]
+    const dy = e.clientY - g.lastXY[1]
+    g.lastXY = [e.clientX, e.clientY]
 
-    const offset: [number, number] = [g.current.from[0] + mx, g.current.from[1] + my]
+    const offset: [number, number] = [g.from[0] + mx, g.from[1] + my]
 
-    if (!g.current.started) {
+    if (!g.started) {
       if (Math.abs(mx) < TAP_THRESHOLD && Math.abs(my) < TAP_THRESHOLD) return
-      g.current.started = true
-      g.current.memo = handlerRef.current({
+      g.started = true
+      g.memo = handler({
         first: true, last: false, active: true,
         delta: [mx, my], movement: [mx, my],
         xy: [e.clientX, e.clientY],
@@ -85,38 +82,35 @@ export function useRawDrag(handler: (state: DragState) => any, config: DragConfi
       return
     }
 
-    g.current.memo = handlerRef.current({
+    g.memo = handler({
       first: false, last: false, active: true,
       delta: [dx, dy], movement: [mx, my],
       xy: [e.clientX, e.clientY],
-      offset, event: e, memo: g.current.memo,
+      offset, event: e, memo: g.memo,
     })
-  }, [])
+  }
 
-  const onPointerUp = useCallback((e: PointerEvent) => {
-    if (!g.current.active) return
-    g.current.active = false
+  const onPointerUp = (e: PointerEvent) => {
+    if (!g.active) return
+    g.active = false
 
-    if (!g.current.started) return // tap — no drag fired
+    if (!g.started) return // tap — no drag fired
 
-    const mx = e.clientX - g.current.startXY[0]
-    const my = e.clientY - g.current.startXY[1]
-    const dx = e.clientX - g.current.lastXY[0]
-    const dy = e.clientY - g.current.lastXY[1]
-    const offset: [number, number] = [g.current.from[0] + mx, g.current.from[1] + my]
-    g.current.offset = offset // persist for next drag session
+    const mx = e.clientX - g.startXY[0]
+    const my = e.clientY - g.startXY[1]
+    const dx = e.clientX - g.lastXY[0]
+    const dy = e.clientY - g.lastXY[1]
+    const offset: [number, number] = [g.from[0] + mx, g.from[1] + my]
+    g.offset = offset // persist for next drag session
 
-    handlerRef.current({
+    handler({
       first: false, last: true, active: false,
       delta: [dx, dy], movement: [mx, my],
       xy: [e.clientX, e.clientY],
-      offset, event: e, memo: g.current.memo,
+      offset, event: e, memo: g.memo,
     })
-    g.current.memo = undefined
-  }, [])
+    g.memo = undefined
+  }
 
-  return useCallback(
-    () => ({ onPointerDown, onPointerMove, onPointerUp }),
-    [onPointerDown, onPointerMove, onPointerUp]
-  )
+  return () => ({ onPointerDown, onPointerMove, onPointerUp })
 }

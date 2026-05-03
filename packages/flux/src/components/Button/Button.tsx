@@ -1,3 +1,4 @@
+/** @jsxImportSource @madenowhere/phaze */
 import { useStoreContext } from '../..'
 import { ButtonInput } from '../../types'
 import { Row } from '../UI'

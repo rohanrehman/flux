@@ -1,3 +1,4 @@
+/** @jsxImportSource @madenowhere/phaze */
 import { StyledTitle } from './StyledFolder'
 import { Chevron } from '../UI'
 

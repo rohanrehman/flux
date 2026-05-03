@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef, useState } from 'preact/hooks'
-import { memo } from '../../utils/memo'
+/** @jsxImportSource @madenowhere/phaze */
+import { signal, effect } from '@madenowhere/phaze'
 import { useStoreContext } from '../../context'
 import { useToggle } from '../../hooks'
 import { useTh } from '../../styles'
@@ -16,21 +16,29 @@ const Folder = ({ name, path, tree }: FolderProps) => {
   const store = useStoreContext()
   const newPath = join(path, name)
   const { collapsed, color } = store.getFolderSettings(newPath)
-  const [toggled, setToggle] = useState(!collapsed)
+  const toggled = signal(!collapsed)
 
-  const folderRef = useRef<HTMLDivElement>(null)
+  const folderRef = signal<HTMLDivElement>()
 
   const widgetColor = useTh('colors', 'folderWidgetColor')
   const textColor = useTh('colors', 'folderTextColor')
 
-  useLayoutEffect(() => {
-    folderRef.current!.style.setProperty('--flux-colors-folderWidgetColor', color || widgetColor)
-    folderRef.current!.style.setProperty('--flux-colors-folderTextColor', color || textColor)
-  }, [color, widgetColor, textColor])
+  // Apply folder color CSS vars when the ref lands. Phaze auto-tracks
+  // folderRef() so the effect re-runs once the element mounts.
+  effect(() => {
+    const el = folderRef()
+    if (!el) return
+    el.style.setProperty('--flux-colors-folderWidgetColor', color || widgetColor)
+    el.style.setProperty('--flux-colors-folderTextColor', color || textColor)
+  })
 
   return (
     <StyledFolder innerRef={folderRef}>
-      <FolderTitle name={name!} toggled={toggled} toggle={() => setToggle((t) => !t)} />
+      <FolderTitle
+        name={name!}
+        toggled={toggled()}
+        toggle={() => toggled.set(!toggled())}
+      />
       <TreeWrapper parent={newPath} tree={tree} toggled={toggled} />
     </StyledFolder>
   )
@@ -42,33 +50,40 @@ type TreeWrapperProps = {
   flat?: boolean
   parent?: string
   tree: Tree
-  toggled: boolean
+  // Phaze migration: toggled is a thunk so useToggle can subscribe.
+  // FluxRoot passes a Computed; nested Folders pass a Signal.
+  toggled: () => boolean
 }
 
-export const TreeWrapper = memo(
-  ({ isRoot = false, fill = false, flat = false, parent, tree, toggled }: TreeWrapperProps) => {
-    const { wrapperRef, contentRef } = useToggle(toggled)
-    const store = useStoreContext()
+export function TreeWrapper({
+  isRoot = false,
+  fill = false,
+  flat = false,
+  parent,
+  tree,
+  toggled,
+}: TreeWrapperProps) {
+  const { wrapperRef, contentRef } = useToggle(toggled)
+  const store = useStoreContext()
 
-    const getOrder = ([key, o]: [key: string, o: any]) => {
-      const order = isInput(o) ? store.getInput(o.path)?.order : store.getFolderSettings(join(parent, key)).order
-      return order || 0
-    }
-
-    const entries = Object.entries(tree).sort((a, b) => getOrder(a) - getOrder(b))
-    return (
-      <StyledWrapper innerRef={wrapperRef} isRoot={isRoot} fill={fill} flat={flat}>
-        <StyledContent innerRef={contentRef} isRoot={isRoot} toggled={toggled}>
-          {entries.map(([key, value]) =>
-            isInput(value) ? (
-              // @ts-expect-error
-              <Control key={value.path} valueKey={value.valueKey} path={value.path} />
-            ) : (
-              <Folder key={key} name={key} path={parent} tree={value as Tree} />
-            )
-          )}
-        </StyledContent>
-      </StyledWrapper>
-    )
+  const getOrder = ([key, o]: [key: string, o: any]) => {
+    const order = isInput(o) ? store.getInput(o.path)?.order : store.getFolderSettings(join(parent, key)).order
+    return order || 0
   }
-)
+
+  const entries = Object.entries(tree).sort((a, b) => getOrder(a) - getOrder(b))
+  return (
+    <StyledWrapper innerRef={wrapperRef} isRoot={isRoot} fill={fill} flat={flat}>
+      <StyledContent innerRef={contentRef} isRoot={isRoot} toggled={toggled()}>
+        {entries.map(([key, value]) =>
+          isInput(value) ? (
+            // @ts-expect-error
+            <Control key={value.path} valueKey={value.valueKey} path={value.path} />
+          ) : (
+            <Folder key={key} name={key} path={parent} tree={value as Tree} />
+          )
+        )}
+      </StyledContent>
+    </StyledWrapper>
+  )
+}

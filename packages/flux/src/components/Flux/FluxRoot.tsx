@@ -214,7 +214,7 @@ function FluxCore({
       )}
       {() =>
         shouldShow() && (
-          <TreeWrapper isRoot fill={fill} flat={flat} tree={tree()} toggled={toggled()} />
+          <TreeWrapper isRoot fill={fill} flat={flat} tree={tree()} toggled={toggled} />
         )
       }
     </StyledRoot>

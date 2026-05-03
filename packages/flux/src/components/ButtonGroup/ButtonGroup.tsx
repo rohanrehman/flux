@@ -1,4 +1,5 @@
-import type { JSX } from 'preact'
+/** @jsxImportSource @madenowhere/phaze */
+import type { JSXChild } from '@madenowhere/phaze'
 import { Row, Label } from '../UI'
 import { StyledButtonGroup } from './StyledButtonGroup'
 import { StyledButtonGroupButton } from './StyledButtonGroupButton'
@@ -6,7 +7,7 @@ import { ButtonGroupInputOpts, ButtonGroupOpts } from '../../types'
 import { useStoreContext } from '../..'
 
 export type ButtonGroupInternalOpts = {
-  label: null | JSX.Element | string
+  label: null | JSXChild | string
   opts: ButtonGroupInputOpts
 }
 

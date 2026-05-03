@@ -1,19 +1,19 @@
-import { useCallback, useRef, useEffect } from 'preact/hooks'
-import type { JSX } from 'preact'
+/** @jsxImportSource @madenowhere/phaze */
+import { signal, effect, cleanup } from '@madenowhere/phaze'
 import { useInputContext } from '../../context'
 import { parseNumber } from '../../utils'
 import { StyledInput, InputContainer, InnerLabel } from './StyledInput'
-import type { ComponentChildren } from 'preact'
+import type { JSXChild } from '@madenowhere/phaze'
 
 export type ValueInputProps = {
   id?: string
   value: string
-  innerLabel?: false | ComponentChildren
+  innerLabel?: false | JSXChild
   type?: 'number'
   inputType?: string
   onUpdate: (value: any) => void
   onChange: (value: string) => void
-  onKeyDown?: (event: JSX.TargetedKeyboardEvent<HTMLInputElement>) => void
+  onKeyDown?: (event: KeyboardEvent) => void
   rows?: number
 }
 
@@ -31,43 +31,39 @@ export function ValueInput({
 }: ValueInputProps) {
   const { id: _id, emitOnEditStart, emitOnEditEnd, disabled } = useInputContext()
   const inputId = id || _id
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = signal<HTMLInputElement>()
 
   const isTextArea = rows > 0
   const asType = isTextArea ? 'textarea' : 'input'
 
-  const update = useCallback(
-    (fn: (value: string) => void) => (event: any) => {
+  const update =
+    (fn: (value: string) => void) =>
+    (event: any) => {
       const _value = event.currentTarget.value
       fn(_value)
-    },
-    []
-  )
+    }
 
   /**
-   * We need to add native blur handler because of this issue in React, where
-   * the onBlur handler isn't called during unmount:
+   * We need to add a native blur handler because of this React issue
+   * where onBlur isn't called during unmount:
    * https://github.com/facebook/react/issues/12363
    */
-
-  useEffect(() => {
-    const ref = inputRef.current
+  effect(() => {
+    const ref = inputRef()
+    if (!ref) return
     const _onUpdate = update((value) => {
       onUpdate(value)
       emitOnEditEnd()
     })
-    ref?.addEventListener('blur', _onUpdate)
-    return () => ref?.removeEventListener('blur', _onUpdate)
-  }, [update, onUpdate, emitOnEditEnd])
+    ref.addEventListener('blur', _onUpdate)
+    cleanup(() => ref.removeEventListener('blur', _onUpdate))
+  })
 
-  const onKeyPress = useCallback(
-    (event: JSX.TargetedKeyboardEvent<HTMLInputElement>) => {
-      if (event.key === 'Enter') {
-        update(onUpdate)(event)
-      }
-    },
-    [update, onUpdate]
-  )
+  const onKeyPress = (event: KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      update(onUpdate)(event)
+    }
+  }
 
   // It's a bit sad but we're passing the `as` prop here to avoid Typescript
   // complaining.
@@ -82,7 +78,7 @@ export function ValueInput({
         id={inputId}
         type={inputType}
         autoComplete="off"
-        spellCheck={false}
+        spellcheck={false}
         value={value}
         onChange={update(onChange)}
         onFocus={() => emitOnEditStart()}
@@ -96,17 +92,14 @@ export function ValueInput({
 }
 
 export function NumberInput({ onUpdate, ...props }: ValueInputProps) {
-  const _onUpdate = useCallback((v: any) => onUpdate(parseNumber(v)), [onUpdate])
-  const onKeyDown = useCallback(
-    (event: JSX.TargetedKeyboardEvent<HTMLInputElement>) => {
-      const dir = event.key === 'ArrowUp' ? 1 : event.key === 'ArrowDown' ? -1 : 0
-      if (dir) {
-        event.preventDefault()
-        const step = event.altKey ? 0.1 : event.shiftKey ? 10 : 1
-        onUpdate((v: any) => parseFloat(v) + dir * step)
-      }
-    },
-    [onUpdate]
-  )
+  const _onUpdate = (v: any) => onUpdate(parseNumber(v))
+  const onKeyDown = (event: KeyboardEvent) => {
+    const dir = event.key === 'ArrowUp' ? 1 : event.key === 'ArrowDown' ? -1 : 0
+    if (dir) {
+      event.preventDefault()
+      const step = event.altKey ? 0.1 : event.shiftKey ? 10 : 1
+      onUpdate((v: any) => parseFloat(v) + dir * step)
+    }
+  }
   return <ValueInput {...props} onUpdate={_onUpdate} onKeyDown={onKeyDown} type="number" />
 }
