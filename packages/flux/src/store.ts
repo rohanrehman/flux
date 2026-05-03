@@ -1,18 +1,21 @@
-import { useMemo } from 'preact/hooks'
-import { create } from 'zustand'
-import { subscribeWithSelector } from 'zustand/middleware'
+import { store } from '@madenowhere/phaze/store'
+import { untrack } from '@madenowhere/phaze'
 import { updateInput, warn, FluxErrors, getUid, getDataFromSchema } from './utils'
 import { SpecialInputs, MappedPaths, DataInput } from './types'
 import type { FolderSettings, State, StoreType } from './types'
 import { createEventEmitter } from './eventEmitter'
 
+// Phaze-native flux store — a deeply reactive proxy. Reads inside phaze
+// effects/computeds auto-track; writes notify per-property. Replaces the
+// zustand `create()` + `subscribeWithSelector` middleware that the preact
+// version used. Consumers read `s.state.data[path]` directly inside a
+// reactive scope; no selectors, no equality functions.
 export const Store = function (this: StoreType) {
-  const store = create<State>()(subscribeWithSelector(() => ({ data: {} })))
-
+  const state = store<State>({ data: {} })
   const eventEmitter = createEventEmitter()
 
   this.storeId = getUid()
-  this.useStore = store
+  this.state = state
   /**
    * Folders will hold the folder settings for the pane.
    * @note possibly make this reactive
@@ -31,12 +34,13 @@ export const Store = function (this: StoreType) {
    * root pane to only display the inputs that are consumed by mounted
    * components.
    *
-   * @param data
+   * Reads here track inside reactive scopes — calling getVisiblePaths()
+   * from a phaze effect/computed re-runs whenever any consumed property
+   * changes. No selector/equality dance needed.
    */
   this.getVisiblePaths = () => {
     const data = this.getData()
     const paths = Object.keys(data)
-    // identifies hiddenFolders
     const hiddenFolders: string[] = []
     Object.entries(folders).forEach(([path, settings]) => {
       if (
@@ -44,13 +48,12 @@ export const Store = function (this: StoreType) {
         settings.render &&
         // and the folder path matches a data path
         // (this can happen on first mount and could probably be solved if folder settings
-        // were set together with the store data. In fact, the store data is set in useEffect
-        // while folders settings are set in useMemo).
+        // were set together with the store data. In fact, the store data is set in the
+        // mount effect while folders settings are set as plain locals).
         paths.some((p) => p.indexOf(path) === 0) &&
         // the folder settings is supposed to be hidden
         !settings.render(this.get)
       )
-        // then folder is hidden
         hiddenFolders.push(path + '.')
     })
 
@@ -65,7 +68,6 @@ export const Store = function (this: StoreType) {
         // if its render functions doesn't exists or returns true
         (!data[path].render || data[path].render!(this.get))
       ) {
-        // then the input path is visible
         visiblePaths.push(path)
       }
     })
@@ -84,43 +86,43 @@ export const Store = function (this: StoreType) {
   }
 
   /**
-   * When the useControls hook unmmounts, it will call this function that will
-   * decrease the __refCount of all the inputs. When an input __refCount reaches 0, it
-   * should no longer be displayed in the panel.
+   * When the useControls hook unmounts, it will call this function that will
+   * decrease the __refCount of all the inputs. When an input __refCount reaches 0,
+   * it should no longer be displayed in the panel.
    *
    * @param paths
    */
   this.disposePaths = (paths) => {
-    store.setState((s) => {
-      const data = s.data
-      paths.forEach((path) => {
-        if (path in data) {
-          const input = data[path]
-          input.__refCount--
-          if (input.__refCount === 0 && input.type in SpecialInputs) {
-            // this makes sure special inputs such as buttons are properly
-            // refreshed. This might need some attention though.
-            delete data[path]
-          }
+    const data = state.data
+    paths.forEach((path) => {
+      if (path in data) {
+        const input = data[path]
+        input.__refCount--
+        if (input.__refCount === 0 && input.type in SpecialInputs) {
+          // this makes sure special inputs such as buttons are properly
+          // refreshed. This might need some attention though.
+          delete data[path]
         }
-      })
-      return { data }
+      }
     })
   }
 
   this.dispose = () => {
-    store.setState(() => {
-      return { data: {} }
-    })
+    state.data = {}
   }
 
   this.getFolderSettings = (path) => {
     return folders[path] || {}
   }
 
-  // Shorthand to get zustand store data
+  /**
+   * Returns the data proxy. Reads inside a phaze reactive scope (effect /
+   * computed / JSX expression) automatically track. Outside a reactive
+   * scope this is just a plain read — same shape as the preact `getState`
+   * accessor it replaces.
+   */
   this.getData = () => {
-    return store.getState().data
+    return state.data
   }
 
   /**
@@ -133,35 +135,28 @@ export const Store = function (this: StoreType) {
    * settings if needed.
    *
    * @param newData the data to update
-   * @param depsChanged to keep track of dependencies
+   * @param override force-overwrite settings even when refCount > 0
    */
   this.addData = (newData, override) => {
-    store.setState((s) => {
-      const data = s.data
-      Object.entries(newData).forEach(([path, newInputData]) => {
-        let input = data[path]
+    const data = state.data
+    Object.entries(newData).forEach(([path, newInputData]) => {
+      let input = data[path]
 
-        // If an input already exists compare its values and increase the reference __refCount.
-        if (!!input) {
-          // @ts-ignore
-          const { type, value, ...rest } = newInputData
-          if (type !== input.type) {
-            warn(FluxErrors.INPUT_TYPE_OVERRIDE, path, input.type, type)
-          } else {
-            if (input.__refCount === 0 || override) {
-              Object.assign(input, rest)
-            }
-            // Else we increment the ref count
-            input.__refCount++
-          }
+      // If an input already exists compare its values and increase the reference __refCount.
+      if (!!input) {
+        // @ts-ignore
+        const { type, value, ...rest } = newInputData
+        if (type !== input.type) {
+          warn(FluxErrors.INPUT_TYPE_OVERRIDE, path, input.type, type)
         } else {
-          data[path] = { ...newInputData, __refCount: 1 }
+          if (input.__refCount === 0 || override) {
+            Object.assign(input, rest)
+          }
+          input.__refCount++
         }
-      })
-
-      // Since we're returning a new object, direct mutation of data
-      // Should trigger a re-render so we're good!
-      return { data }
+      } else {
+        data[path] = { ...newInputData, __refCount: 1 }
+      }
     })
   }
 
@@ -172,53 +167,47 @@ export const Store = function (this: StoreType) {
    * @param value new value of the input
    */
   this.setValueAtPath = (path, value, fromPanel) => {
-    store.setState((s) => {
-      const data = s.data
-      //@ts-expect-error (we always update inputs with a value)
-      updateInput(data[path], value, path, this, fromPanel)
-      return { data }
-    })
+    const data = state.data
+    //@ts-expect-error (we always update inputs with a value)
+    updateInput(data[path], value, path, this, fromPanel)
   }
 
   this.setSettingsAtPath = (path, settings) => {
-    store.setState((s) => {
-      const data = s.data
-      //@ts-expect-error (we always update inputs with settings)
-      data[path].settings = { ...data[path].settings, ...settings }
-      return { data }
-    })
+    const data = state.data
+    //@ts-expect-error (we always update inputs with settings)
+    data[path].settings = { ...data[path].settings, ...settings }
   }
 
   this.disableInputAtPath = (path, flag) => {
-    store.setState((s) => {
-      const data = s.data
-      //@ts-expect-error (we always update inputs with a value)
-      data[path].disabled = flag
-      return { data }
-    })
+    const data = state.data
+    //@ts-expect-error (we always update inputs with a value)
+    data[path].disabled = flag
   }
 
   this.set = (values, fromPanel: boolean) => {
-    store.setState((s) => {
-      const data = s.data
-      Object.entries(values).forEach(([path, value]) => {
-        try {
-          //@ts-expect-error (we always update inputs with a value)
-          updateInput(data[path], value, undefined, undefined, fromPanel)
-        } catch (e) {
-          if ((typeof process !== 'undefined' && process.env?.NODE_ENV === 'development')) {
-            // eslint-disable-next-line no-console
-            console.warn(`[This message will only show in development]: \`set\` for path ${path} has failed.`, e)
-          }
+    const data = state.data
+    Object.entries(values).forEach(([path, value]) => {
+      try {
+        //@ts-expect-error (we always update inputs with a value)
+        updateInput(data[path], value, undefined, undefined, fromPanel)
+      } catch (e) {
+        if ((typeof process !== 'undefined' && process.env?.NODE_ENV === 'development')) {
+          // eslint-disable-next-line no-console
+          console.warn(`[This message will only show in development]: \`set\` for path ${path} has failed.`, e)
         }
-      })
-      return { data }
+      }
     })
   }
 
+  /**
+   * Imperative read — returns the input at a path WITHOUT subscribing
+   * the calling reactive scope. Use for one-shot reads in event handlers,
+   * validation utilities, etc. Reactive consumers should read
+   * `getData()[path]` directly so changes flow through.
+   */
   this.getInput = (path) => {
     try {
-      return this.getData()[path] as DataInput
+      return untrack(() => state.data[path]) as DataInput
     } catch (e) {
       warn(FluxErrors.PATH_DOESNT_EXIST, path)
     }
@@ -257,8 +246,13 @@ export const Store = function (this: StoreType) {
 
 export const fluxStore = new Store()
 
-export function useCreateStore() {
-  return useMemo(() => new Store(), [])
+/**
+ * Create a fresh store instance scoped to a component or sub-tree.
+ * Renamed from `useCreateStore` (preact era) since phaze components run
+ * once — there's no useMemo equivalent and no need for one.
+ */
+export function createStore() {
+  return new Store()
 }
 
 if ((typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') && typeof window !== 'undefined') {

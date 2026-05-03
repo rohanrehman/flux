@@ -1,16 +1,6 @@
-import type { UseBoundStore, StoreApi } from 'zustand'
 import type { SpecialInput, RenderFn, FolderSettings, Plugin, OnChangeHandler } from './public'
 
 export type State = { data: Data }
-
-// Type for enhanced subscribe API from subscribeWithSelector middleware
-export type SubscribeWithSelectorAPI<T> = {
-  subscribe: <U>(
-    selector: (state: T) => U,
-    listener: (value: U, previousValue: U) => void,
-    options?: { equalityFn?: (a: U, b: U) => boolean; fireImmediately?: boolean }
-  ) => () => void
-}
 
 export type MappedPaths = Record<
   string,
@@ -26,7 +16,11 @@ export type MappedPaths = Record<
 type Dispose = () => void
 
 export type StoreType = {
-  useStore: UseBoundStore<StoreApi<State>> & SubscribeWithSelectorAPI<State>
+  /**
+   * The deeply-reactive phaze store proxy. Read `state.data[path]`
+   * inside an effect/computed/JSX expression to track changes.
+   */
+  state: State
   storeId: string
   orderPaths: (paths: string[]) => string[]
   setOrderedPaths: (newPaths: string[]) => void
