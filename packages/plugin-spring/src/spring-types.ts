@@ -1,4 +1,4 @@
-import type { InputWithSettings, NumberSettings, FluxInputProps, InternalVectorSettings } from 'flux/plugin'
+import type { InputWithSettings, NumberSettings, FluxInputProps, InternalVectorSettings } from '@rohanrehman/flux/plugin'
 
 export type Spring = { tension?: number; friction?: number; mass?: number }
 export type InternalSpring = { tension: number; friction: number; mass: number }

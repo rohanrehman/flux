@@ -1,4 +1,4 @@
-import { normalizeVector, sanitizeVector } from 'flux/plugin'
+import { normalizeVector, sanitizeVector } from '@rohanrehman/flux/plugin'
 import type { InternalSpring, InternalSpringSettings, SpringInput } from './spring-types'
 
 const defaultTensionSettings = { min: 1, step: 1 }

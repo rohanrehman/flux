@@ -1,4 +1,5 @@
-import { useInputContext, Components } from 'flux/plugin'
+/** @jsxImportSource @madenowhere/phaze */
+import { useInputContext, Components } from '@rohanrehman/flux/plugin'
 import { SpringCanvas } from './SpringCanvas'
 import type { SpringProps } from './spring-types'
 

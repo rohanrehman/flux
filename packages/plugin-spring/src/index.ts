@@ -1,4 +1,4 @@
-import { createPlugin } from 'flux/plugin'
+import { createPlugin } from '@rohanrehman/flux/plugin'
 import { Spring } from './Spring'
 import { normalize, sanitize } from './spring-plugin'
 

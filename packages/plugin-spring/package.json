@@ -22,13 +22,14 @@
     "dev": "tsup --watch"
   },
   "peerDependencies": {
-    "flux": ">=0.10.1",
-    "preact": "^10.0.0"
+    "@rohanrehman/flux": ">=0.1.0",
+    "@madenowhere/phaze": ">=0.0.9"
   },
   "dependencies": {
-    "@react-spring/web": "10.0.3"
+    "@madenowhere/photon": "^0.0.7"
   },
   "devDependencies": {
-    "@rohanrehman/flux": "workspace:*"
+    "@rohanrehman/flux": "workspace:*",
+    "@madenowhere/phaze": "^0.0.9"
   }
 }
