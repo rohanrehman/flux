@@ -1,3 +1,4 @@
+import type { JSXChild } from '@madenowhere/phaze'
 import type { SpecialInput, RenderFn, FolderSettings, Plugin, OnChangeHandler } from './public'
 
 export type State = { data: Data }
@@ -46,7 +47,7 @@ export type StoreType = {
 
 export type CommonOptions = {
   key: string
-  label: string | React.JSX.Element
+  label: string | JSXChild
   hint?: string
   render?: RenderFn
   order: number

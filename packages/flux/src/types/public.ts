@@ -73,7 +73,7 @@ export type MonitorSettings = { graph?: boolean; interval?: number }
 
 export type MonitorInput = {
   type: SpecialInputs.MONITOR
-  objectOrFn: React.MutableRefObject<any> | Function
+  objectOrFn: { current: any } | Function
   settings: MonitorSettings
 }
 

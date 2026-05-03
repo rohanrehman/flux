@@ -1,4 +1,4 @@
-import { createPlugin } from 'flux/plugin'
+import { createPlugin } from '@rohanrehman/flux/plugin'
 import { Date } from './Date'
 import { sanitize, normalize, format } from './date-plugin'
 

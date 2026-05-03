@@ -22,14 +22,11 @@
     "dev": "tsup --watch"
   },
   "peerDependencies": {
-    "flux": ">=0.10.1",
-    "preact": "^10.0.0"
-  },
-  "dependencies": {
-    "react-datepicker": "^9.1.0"
+    "@rohanrehman/flux": ">=0.1.0",
+    "@madenowhere/phaze": ">=0.0.9"
   },
   "devDependencies": {
-    "@types/react-datepicker": "^7.0.0",
-    "@rohanrehman/flux": "workspace:*"
+    "@rohanrehman/flux": "workspace:*",
+    "@madenowhere/phaze": "^0.0.9"
   }
 }
