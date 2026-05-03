@@ -1,7 +1,7 @@
 // used as entrypoint
 
 // export all components
-import type { ComponentType } from 'preact'
+import type { Component } from '@madenowhere/phaze'
 import { Row, Label, Portal, Overlay } from '../components/UI'
 import { String } from '../plugins/String'
 import { Number } from '../plugins/Number'
@@ -11,7 +11,7 @@ import { Select } from '../plugins/Select'
 import { Vector } from '../plugins/Vector'
 import { InnerLabel } from '../components/ValueInput/StyledInput'
 
-export const Components: Record<string, ComponentType<any>> = {
+export const Components: Record<string, Component<any>> = {
   Row,
   Label,
   Portal,

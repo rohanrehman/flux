@@ -1,4 +1,7 @@
-import type { JSX } from 'preact'
+// Phaze migration: phaze JSX has no `CSSProperties` type. The theme
+// returns plain CSS variable maps that get spread onto a div's `style`
+// — phaze accepts `Record<string, string | number | null | undefined>`.
+type CSSProperties = Record<string, string | number | undefined>
 
 export function getDefaultTheme() {
   return {
@@ -110,7 +113,7 @@ function resolveRef<C extends keyof FullTheme>(theme: FullTheme, category: C, ke
 }
 
 /** Convert a theme object to a flat CSS-variable style object. */
-function themeToCSSVars(theme: FullTheme): JSX.CSSProperties {
+function themeToCSSVars(theme: FullTheme): CSSProperties {
   const vars: Record<string, string> = {}
   for (const category of Object.keys(theme) as (keyof FullTheme)[]) {
     for (const key of Object.keys(theme[category] as object)) {
@@ -118,10 +121,10 @@ function themeToCSSVars(theme: FullTheme): JSX.CSSProperties {
       vars[`--flux-${category}-${key}`] = value
     }
   }
-  return vars as JSX.CSSProperties
+  return vars as CSSProperties
 }
 
-export function mergeTheme(newTheme?: FluxCustomTheme): { theme: FullTheme; style: JSX.CSSProperties } {
+export function mergeTheme(newTheme?: FluxCustomTheme): { theme: FullTheme; style: CSSProperties } {
   const theme = getDefaultTheme()
   if (newTheme) {
     for (const category of Object.keys(newTheme) as (keyof FluxCustomTheme)[]) {

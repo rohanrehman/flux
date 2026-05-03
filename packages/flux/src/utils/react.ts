@@ -1,4 +1,10 @@
-import type { Ref, RefCallback } from 'preact'
+import type { Signal } from '@madenowhere/phaze'
+
+// Phaze migration: refs in flux can be a callback, an object with
+// `current`, or a Signal<T | undefined> (auto-wired via signal.set on
+// mount). mergeRefs accepts any of these forms.
+type Ref<T> = ((value: T | null) => void) | { current: T | null } | Signal<T | undefined>
+type RefCallback<T> = (value: T | null) => void
 
 /*
  * https://github.com/gregberge/react-merge-refs
@@ -25,9 +31,9 @@ import type { Ref, RefCallback } from 'preact'
  */
 
 export function mergeRefs<T>(refs: Array<Ref<T> | null | undefined>): RefCallback<T> {
-  return (value) => {
+  return (value: T | null) => {
     refs.forEach((ref) => {
-      if (typeof ref === 'function') ref(value)
+      if (typeof ref === 'function') (ref as (v: T | null) => void)(value)
       else if (ref != null) {
         ;(ref as { current: T | null }).current = value
       }
