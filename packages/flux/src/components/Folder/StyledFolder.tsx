@@ -36,14 +36,23 @@ export function StyledContent({
   isRoot = false,
   className = '',
   ...props
-}: DivProps & { innerRef?: RefLike<HTMLDivElement>; toggled?: boolean; isRoot?: boolean }) {
-  const classes = [
-    'flux-folder-content',
-    toggled ? 'flux-folder-content--open' : 'flux-folder-content--closed',
-    isRoot ? 'flux-folder-content--root' : '',
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ')
-  return <div ref={innerRef as any} class={classes} {...props} />
+}: DivProps & { innerRef?: RefLike<HTMLDivElement>; toggled?: boolean | (() => boolean); isRoot?: boolean }) {
+  // class as thunk so the open/closed modifier flips reactively.
+  const isToggled = () => (typeof toggled === 'function' ? toggled() : toggled)
+  return (
+    <div
+      ref={innerRef as any}
+      class={() =>
+        [
+          'flux-folder-content',
+          isToggled() ? 'flux-folder-content--open' : 'flux-folder-content--closed',
+          isRoot ? 'flux-folder-content--root' : '',
+          className,
+        ]
+          .filter(Boolean)
+          .join(' ')
+      }
+      {...props}
+    />
+  )
 }

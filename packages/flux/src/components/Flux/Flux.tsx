@@ -1,16 +1,21 @@
-import { useEffect } from 'preact/hooks'
-import { render } from 'preact'
+/** @jsxImportSource @madenowhere/phaze */
+import { effect, cleanup, render } from '@madenowhere/phaze'
 import { fluxStore } from '../../store'
 import { FluxRoot, FluxRootProps } from './FluxRoot'
 
 /**
- * Manages the lifecycle of the global Flux panel, including creation, cleanup,
- * and reference counting to ensure the panel is only removed when no components
- * are using it.
+ * Manages the lifecycle of the global Flux panel, including creation,
+ * cleanup, and reference counting to ensure the panel is only removed
+ * when no components are using it.
+ *
+ * Phaze migration: render() takes a thunk in phaze (not a JSX element
+ * directly), and there's no equivalent to preact's render(null, root)
+ * for unmounting — phaze returns a dispose function from render().
  */
 class PanelLifecycle {
   private refCount = 0
   private rootEl: HTMLElement | null = null
+  private dispose: (() => void) | null = null
   private initialized = false
   private explicitPanelInTree = false
 
@@ -41,31 +46,34 @@ class PanelLifecycle {
   }
 
   /**
-   * Creates the panel DOM element and renders into it with Preact.
+   * Creates the panel DOM element and renders into it via phaze.
    * @private
    */
   private createPanel(): void {
     if (!this.rootEl) {
       this.rootEl =
-        document.getElementById('flux__root') || Object.assign(document.createElement('div'), { id: 'flux__root' })
+        document.getElementById('flux__root') ||
+        Object.assign(document.createElement('div'), { id: 'flux__root' })
 
       if (document.body) {
         document.body.appendChild(this.rootEl)
-        render(<Flux isRoot />, this.rootEl)
+        // phaze render() takes a thunk; the returned dispose function
+        // tears down the reactive scope on destroyPanel().
+        const result = render(() => <Flux isRoot />, this.rootEl)
+        this.dispose = typeof result === 'function' ? result : null
       }
     }
   }
 
   /**
-   * Destroys the panel by unmounting Preact root and removing DOM element.
+   * Destroys the panel by disposing the phaze scope and removing the DOM
+   * element.
    * @private
    */
   private destroyPanel(): void {
     if (this.rootEl) {
-      // Unmount Preact root
-      render(null, this.rootEl)
-
-      // Remove DOM element
+      this.dispose?.()
+      this.dispose = null
       this.rootEl.remove()
       this.rootEl = null
     }
@@ -111,34 +119,32 @@ type FluxProps = Omit<Partial<FluxRootProps>, 'store'> & { isRoot?: boolean }
  *
  */
 export function Flux({ isRoot = false, ...props }: FluxProps) {
-  useEffect(() => {
-    // When an explicit <Flux> component is rendered (not the auto-created root),
-    // we need to signal to the panel lifecycle to prevent creating duplicate panels
+  // When an explicit <Flux> component is rendered (not the auto-created
+  // root), tell the panel lifecycle so we don't double-mount.
+  effect(() => {
     if (!isRoot) {
       panelLifecycle.setExplicitPanel(true)
-      return () => {
+      cleanup(() => {
         panelLifecycle.setExplicitPanel(false)
-      }
+      })
     }
-  }, [isRoot])
+  })
 
   return <FluxRoot store={fluxStore} {...props} />
 }
 
 /**
- * This hook is used by Flux useControls, and ensures that we spawn a Flux Panel
- * without the user having to put it into the component tree. This should only
- * happen when using the global store.
- * @param isGlobalPanel - Whether this is a global panel instance
+ * Spawns a Flux panel implicitly when useControls is called against the
+ * global store. Used by useControls.
+ *
+ * Phaze migration: lifecycle is wrapped in effect() so the parent
+ * component's owner scope tears it down on unmount via cleanup().
  */
 export function useRenderRoot(isGlobalPanel: boolean) {
-  useEffect(() => {
+  effect(() => {
     if (isGlobalPanel) {
       panelLifecycle.mount()
-
-      return () => {
-        panelLifecycle.unmount()
-      }
+      cleanup(() => panelLifecycle.unmount())
     }
-  }, [isGlobalPanel])
+  })
 }

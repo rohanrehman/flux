@@ -1,5 +1,6 @@
-import { useMemo, useState, useEffect, useRef, useCallback } from 'preact/hooks'
-import type { ComponentChildren } from 'preact'
+/** @jsxImportSource @madenowhere/phaze */
+import { signal, effect, cleanup } from '@madenowhere/phaze'
+import type { JSXChild, Signal } from '@madenowhere/phaze'
 import { useDrag } from '../../hooks'
 import { debounce } from '../../utils'
 import { FolderTitleProps } from '../Folder'
@@ -7,50 +8,50 @@ import { Chevron } from '../UI'
 import { StyledTitleWithFilter, TitleContainer, Icon, FilterWrapper } from './StyledFilter'
 
 type FilterControlProps = { setFilter: (value: string) => void; toggle: (flag?: boolean) => void }
-type FilterInputProps = FilterControlProps & { filterShown: boolean }
+type FilterInputProps = FilterControlProps & { filterShown: Signal<boolean> }
 
 function FilterInput({ setFilter, toggle, filterShown }: FilterInputProps) {
-  const [value, set] = useState('')
-  const inputNode = useRef<HTMLInputElement | null>(null)
-  const inputRef = useCallback((el: HTMLInputElement | null) => {
-    if (el === null || el instanceof HTMLInputElement) {
-      inputNode.current = el
-    }
-  }, [])
-  const debouncedOnChange = useMemo<FilterControlProps['setFilter']>(() => debounce(setFilter, 250), [setFilter])
+  const value = signal('')
+  const inputNode: Signal<HTMLInputElement | undefined> = signal()
+
+  const debouncedOnChange = debounce(setFilter, 250)
   const clear = () => {
     setFilter('')
-    set('')
+    value.set('')
   }
 
   const _onChange = (e: Event) => {
     const v = (e.currentTarget as HTMLInputElement).value
     toggle(true)
-    set(v)
+    value.set(v)
   }
 
-  useEffect(() => {
-    debouncedOnChange(value)
-  }, [value, debouncedOnChange])
+  // Push debounced filter changes whenever value() flips.
+  effect(() => {
+    debouncedOnChange(value())
+  })
 
-  useEffect(() => {
-    if (filterShown) inputNode.current?.focus()
-    else inputNode.current?.blur()
-  }, [filterShown])
+  // Track focus on filterShown changes.
+  effect(() => {
+    const node = inputNode()
+    if (!node) return
+    if (filterShown()) node.focus()
+    else node.blur()
+  })
 
   return (
     <>
       <input
-        ref={inputRef}
+        ref={inputNode}
         id="flux-filter-input"
         name="flux-filter-input"
         class="flux-filter-input"
-        value={value}
+        value={() => value()}
         placeholder="[Open filter with CMD+SHIFT+L]"
-        onPointerDown={(e) => e.stopPropagation()}
+        onPointerDown={(e: PointerEvent) => e.stopPropagation()}
         onChange={_onChange}
       />
-      <Icon onClick={() => clear()} style={{ visibility: value ? 'visible' : 'hidden' }}>
+      <Icon onClick={() => clear()} style={() => ({ visibility: value() ? 'visible' : 'hidden' })}>
         <svg xmlns="http://www.w3.org/2000/svg" height="14" width="14" viewBox="0 0 20 20" fill="currentColor">
           <path
             fillRule="evenodd"
@@ -64,14 +65,16 @@ function FilterInput({ setFilter, toggle, filterShown }: FilterInputProps) {
 }
 
 export type TitleWithFilterProps = FilterControlProps &
-  FolderTitleProps & {
+  Omit<FolderTitleProps, 'name' | 'toggled'> & {
     onDrag: (point: { x?: number; y?: number }) => void
     onDragStart: (point: { x?: number; y?: number }) => void
     onDragEnd: (point: { x?: number; y?: number }) => void
-    title: ComponentChildren
+    title: JSXChild
     drag: boolean
     filterEnabled: boolean
     from?: { x?: number; y?: number }
+    // toggled is reactive — comes from FluxRoot as a thunk
+    toggled: () => boolean
   }
 
 export function TitleWithFilter({
@@ -86,19 +89,13 @@ export function TitleWithFilter({
   filterEnabled,
   from,
 }: TitleWithFilterProps) {
-  const [filterShown, setShowFilter] = useState(false)
+  const filterShown = signal(false)
 
   const bind = useDrag(
     ({ offset: [x, y], first, last }) => {
       onDrag({ x, y })
-
-      if (first) {
-        onDragStart({ x, y })
-      }
-
-      if (last) {
-        onDragEnd({ x, y })
-      }
+      if (first) onDragStart({ x, y })
+      if (last) onDragEnd({ x, y })
     },
     {
       filterTaps: true,
@@ -106,21 +103,22 @@ export function TitleWithFilter({
     }
   )
 
-  useEffect(() => {
+  // Cmd-Shift-L toggles the filter pane.
+  effect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
       if (event.key === 'L' && event.shiftKey && event.metaKey) {
-        setShowFilter((f: boolean) => !f)
+        filterShown.set(!filterShown())
       }
     }
     window.addEventListener('keydown', handleShortcut)
-    return () => window.removeEventListener('keydown', handleShortcut)
-  }, [])
+    cleanup(() => window.removeEventListener('keydown', handleShortcut))
+  })
 
   return (
     <>
       <StyledTitleWithFilter mode={drag ? 'drag' : undefined}>
-        <Icon active={!toggled} onClick={() => toggle()}>
-          <Chevron toggled={toggled} width={12} height={8} />
+        <Icon active={() => !toggled()} onClick={() => toggle()}>
+          <Chevron toggled={() => toggled()} width={12} height={8} />
         </Icon>
         <TitleContainer {...(drag ? bind() : {})} drag={drag} filterEnabled={filterEnabled}>
           {title === undefined && drag ? (
@@ -137,7 +135,7 @@ export function TitleWithFilter({
           )}
         </TitleContainer>
         {filterEnabled && (
-          <Icon active={filterShown} onClick={() => setShowFilter((f: boolean) => !f)}>
+          <Icon active={() => filterShown()} onClick={() => filterShown.set(!filterShown())}>
             <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 20 20">
               <path d="M9 9a2 2 0 114 0 2 2 0 01-4 0z" />
               <path
@@ -149,7 +147,7 @@ export function TitleWithFilter({
           </Icon>
         )}
       </StyledTitleWithFilter>
-      <FilterWrapper toggled={filterShown}>
+      <FilterWrapper toggled={() => filterShown()}>
         <FilterInput filterShown={filterShown} setFilter={setFilter} toggle={toggle} />
       </FilterWrapper>
     </>

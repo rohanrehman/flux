@@ -5,17 +5,19 @@ type DivProps = JSX.IntrinsicElements['div']
 type InputProps = JSX.IntrinsicElements['input']
 type IProps = JSX.IntrinsicElements['i']
 type RefLike<T> = ((el: T) => void) | { current: T | null } | Signal<T | undefined>
+type Reactive<T> = T | (() => T)
+const read = <T,>(v: Reactive<T>): T => (typeof v === 'function' ? (v as () => T)() : v)
 
 export function Icon({
   ref,
   active,
   className = '',
   ...props
-}: IProps & { ref?: RefLike<HTMLElement>; active?: boolean }) {
+}: IProps & { ref?: RefLike<HTMLElement>; active?: Reactive<boolean | undefined> }) {
   return (
     <i
       ref={ref as any}
-      class={`flux-filter-icon${active ? ' flux-filter-icon--active' : ''} ${className}`.trim()}
+      class={() => `flux-filter-icon${read(active) ? ' flux-filter-icon--active' : ''} ${className}`.trim()}
       {...props}
     />
   )
@@ -41,11 +43,11 @@ export function FilterWrapper({
   toggled,
   className = '',
   ...props
-}: DivProps & { ref?: RefLike<HTMLDivElement>; toggled?: boolean }) {
+}: DivProps & { ref?: RefLike<HTMLDivElement>; toggled?: Reactive<boolean | undefined> }) {
   return (
     <div
       ref={ref as any}
-      class={`flux-filter-wrapper${toggled ? ' flux-filter-wrapper--toggled' : ''} ${className}`.trim()}
+      class={() => `flux-filter-wrapper${read(toggled) ? ' flux-filter-wrapper--toggled' : ''} ${className}`.trim()}
       {...props}
     />
   )
