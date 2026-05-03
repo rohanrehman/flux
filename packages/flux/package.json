@@ -9,16 +9,16 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./src/index.ts",
+      "import": "./dist/index.js"
     },
     "./plugin": {
-      "import": "./dist/plugin.js",
-      "types": "./dist/plugin.d.ts"
+      "types": "./src/plugin/index.ts",
+      "import": "./dist/plugin.js"
     },
     "./headless": {
-      "import": "./dist/headless.js",
-      "types": "./dist/headless.d.ts"
+      "types": "./src/headless/index.ts",
+      "import": "./dist/headless.js"
     },
     "./dist/flux.css": "./dist/flux.css",
     "./dist/flux.core.css": "./dist/flux.core.css"

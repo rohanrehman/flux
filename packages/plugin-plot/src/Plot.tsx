@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'preact/hooks'
-import { useInputContext, useValues, Components } from 'flux/plugin'
+/** @jsxImportSource @madenowhere/phaze */
+import { effect } from '@madenowhere/phaze'
+import { useInputContext, useValues, Components } from '@rohanrehman/flux/plugin'
 import { PlotCanvas } from './PlotCanvas'
 import type { PlotProps } from './plot-types'
 import { SyledInnerLabel, Container } from './StyledPlot'
@@ -11,14 +12,17 @@ export function Plot() {
 
   const { graph } = settings
 
+  // Reactive accessor — useValues returns a Computed of the symbol values.
   const scope = useValues(value.__symbols)
-  const displayRef = useRef(displayValue)
-  displayRef.current = displayValue
 
-  useEffect(() => {
-    // recomputes when scope which holds the values of the symbols change
-    onUpdate(displayRef.current)
-  }, [scope, onUpdate])
+  // Re-evaluate whenever any of the tracked symbols change. The effect's
+  // dep on scope() is the trigger; we re-run onUpdate with the current
+  // displayValue snapshot so the input is recomputed against the new
+  // scope.
+  effect(() => {
+    void scope()
+    onUpdate(displayValue)
+  })
 
   return (
     <>

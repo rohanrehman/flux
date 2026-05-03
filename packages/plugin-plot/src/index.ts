@@ -1,4 +1,4 @@
-import { createPlugin } from 'flux/plugin'
+import { createPlugin } from '@rohanrehman/flux/plugin'
 import { Plot } from './Plot'
 import { normalize, sanitize, format } from './plot-plugin'
 

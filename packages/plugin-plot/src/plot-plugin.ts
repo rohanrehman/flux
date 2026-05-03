@@ -1,4 +1,4 @@
-import { Data, StoreType } from 'flux/plugin'
+import { Data, StoreType } from '@rohanrehman/flux/plugin'
 import * as math from 'mathjs'
 import { parseExpression } from './plot-utils'
 import type { PlotInput, InternalPlot, InternalPlotSettings } from './plot-types'

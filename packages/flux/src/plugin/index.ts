@@ -1,7 +1,6 @@
 // used as entrypoint
 
 // export all components
-import type { Component } from '@madenowhere/phaze'
 import { Row, Label, Portal, Overlay } from '../components/UI'
 import { String } from '../plugins/String'
 import { Number } from '../plugins/Number'
@@ -11,7 +10,11 @@ import { Select } from '../plugins/Select'
 import { Vector } from '../plugins/Vector'
 import { InnerLabel } from '../components/ValueInput/StyledInput'
 
-export const Components: Record<string, Component<any>> = {
+// No explicit `Record<string, Component>` annotation — phaze's Component
+// type returns JSXChild (wider than JSX.Element=Node) which doesn't
+// satisfy TS's JSX-element constraint. Letting TS infer the concrete
+// component types preserves their JSX usability for plugin consumers.
+export const Components = {
   Row,
   Label,
   Portal,
@@ -46,5 +49,6 @@ export { useTh } from '../styles'
 
 // export types
 export * from '../types/public'
+export type { Data, DataInput, DataItem, State, StoreType } from '../types/internal'
 export type { InternalVectorSettings } from '../plugins/Vector/vector-types'
 export type { InternalNumberSettings } from '../plugins/Number/number-types'

@@ -1,4 +1,4 @@
-import type { FluxInputProps } from 'flux/plugin'
+import type { FluxInputProps } from '@rohanrehman/flux/plugin'
 
 export type Plot = { expression: string }
 export type PlotSettings = { boundsX?: [number, number]; boundsY?: [number, number]; graph?: boolean }

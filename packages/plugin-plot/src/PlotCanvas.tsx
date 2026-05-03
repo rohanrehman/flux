@@ -1,112 +1,128 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'preact/hooks'
-import { memo } from 'preact/compat'
-import { useCanvas2d, useTh, range, invertedRange, debounce, useTransform, clamp, Components, usePointerMove } from 'flux/plugin'
+/** @jsxImportSource @madenowhere/phaze */
+import { signal, effect } from '@madenowhere/phaze'
+import {
+  useCanvas2d,
+  useTh,
+  range,
+  invertedRange,
+  debounce,
+  useTransform,
+  clamp,
+  Components,
+  usePointerMove,
+} from '@rohanrehman/flux/plugin'
 import { Wrapper, Canvas, Dot, ToolTip } from './StyledPlot'
 import type { InternalPlot, InternalPlotSettings } from './plot-types'
 
 type PlotCanvasProps = { value: InternalPlot; settings: InternalPlotSettings }
 
-export const PlotCanvas = memo(({ value: expr, settings }: PlotCanvasProps) => {
+export function PlotCanvas({ value: expr, settings }: PlotCanvasProps) {
   const { boundsX, boundsY } = settings
 
   const accentColor = useTh('colors', 'highlight4')
   const lineWidth = parseFloat(useTh('borderWidths', 'graphLine'))
-  const yPositions = useRef<number[]>([])
 
-  const canvasBoundsY = useRef({ minY: -Infinity, maxY: Infinity })
+  // Mutable plot-state — phaze components run once so plain locals
+  // persist for the row's lifetime (Pattern 5).
+  let yPositions: number[] = []
+  let canvasMinY = -Infinity
+  let canvasMaxY = Infinity
 
-  const drawPlot = useCallback(
-    (_canvas: HTMLCanvasElement, _ctx: CanvasRenderingContext2D) => {
-      // fixes unmount potential bug
-      if (!_canvas || !_ctx) return
-      const { width, height } = _canvas
+  const drawPlot = (_canvas: HTMLCanvasElement, _ctx: CanvasRenderingContext2D) => {
+    if (!_canvas || !_ctx) return
+    const { width, height } = _canvas
 
-      const points: number[] = []
+    const points: number[] = []
 
-      // compute the expressions
-      const [minX, maxX] = boundsX
-      canvasBoundsY.current.minY = Infinity
-      canvasBoundsY.current.maxY = -Infinity
-      for (let i = 0; i < width; i++) {
-        // maps the width of the canvas to minX / maxX
-        const x = invertedRange(range(i, 0, width), minX, maxX)
-        const v = expr(x)
-        if (v < canvasBoundsY.current.minY && v !== -Infinity) canvasBoundsY.current.minY = v
-        if (v > canvasBoundsY.current.maxY && v !== Infinity) canvasBoundsY.current.maxY = v
-        // adds the value to the points array
-        points.push(v)
-      }
+    // compute the expressions
+    const [minX, maxX] = boundsX
+    canvasMinY = Infinity
+    canvasMaxY = -Infinity
+    for (let i = 0; i < width; i++) {
+      // map the canvas width to minX/maxX
+      const x = invertedRange(range(i, 0, width), minX, maxX)
+      const v = expr(x)
+      if (v < canvasMinY && v !== -Infinity) canvasMinY = v
+      if (v > canvasMaxY && v !== Infinity) canvasMaxY = v
+      points.push(v)
+    }
 
-      if (boundsY[0] !== -Infinity) canvasBoundsY.current.minY = boundsY[0]
-      if (boundsY[1] !== Infinity) canvasBoundsY.current.maxY = boundsY[1]
+    if (boundsY[0] !== -Infinity) canvasMinY = boundsY[0]
+    if (boundsY[1] !== Infinity) canvasMaxY = boundsY[1]
 
-      // clear
-      _ctx.clearRect(0, 0, width, height)
+    _ctx.clearRect(0, 0, width, height)
 
-      yPositions.current = []
+    yPositions = []
 
-      // compute the path
-      const path = new Path2D()
-      for (let i = 0; i < width; i++) {
-        const v = invertedRange(range(points[i], canvasBoundsY.current.minY, canvasBoundsY.current.maxY), height - 5, 5)
-        yPositions.current.push(v)
-        path.lineTo(i, v)
-      }
+    const path = new Path2D()
+    for (let i = 0; i < width; i++) {
+      const v = invertedRange(range(points[i], canvasMinY, canvasMaxY), height - 5, 5)
+      yPositions.push(v)
+      path.lineTo(i, v)
+    }
 
-      // draw the white line
-      _ctx.strokeStyle = accentColor
-      _ctx.lineWidth = lineWidth
-      _ctx.stroke(path)
-    },
-    [expr, boundsX, boundsY, accentColor, lineWidth]
-  )
+    _ctx.strokeStyle = accentColor
+    _ctx.lineWidth = lineWidth
+    _ctx.stroke(path)
+  }
 
   const [canvas, ctx] = useCanvas2d(drawPlot)
 
-  // replace with throttle
-  const updatePlot = useMemo(
-    () => debounce(() => drawPlot(canvas.current!, ctx.current!), 250),
-    [canvas, ctx, drawPlot]
-  )
-  useEffect(() => updatePlot(), [updatePlot])
+  // Debounced redraw — refreshes when the canvas/ctx signal lands or expr changes.
+  // Debounced fn is stable for the row's lifetime since we don't re-create it.
+  const updatePlot = debounce(() => {
+    const c = canvas()
+    const c2d = ctx()
+    if (c && c2d) drawPlot(c, c2d)
+  }, 250)
+  effect(() => {
+    void canvas()
+    void ctx()
+    updatePlot()
+  })
 
-  const [toolTipOpen, toggleToolTip] = useState(false)
-  const [toolTipValues, setToolTipValues] = useState({ x: '0', y: '0' })
+  const toolTipOpen = signal(false)
+  const toolTipValues = signal({ x: '0', y: '0' })
 
   const [dotRef, set] = useTransform<HTMLDivElement>()
-  const canvasBounds = useRef<DOMRect>()
+  let canvasBounds: DOMRect | undefined
 
   const bind = usePointerMove(({ xy: [x], first }) => {
     if (first) {
-      canvasBounds.current = canvas.current!.getBoundingClientRect()
+      const c = canvas()
+      if (!c) return
+      canvasBounds = c.getBoundingClientRect()
     }
-    const { left, top, width, height } = canvasBounds.current!
+    if (!canvasBounds) return
+    const { left, top, width, height } = canvasBounds
     const [minX, maxX] = boundsX
     const i = Math.ceil(x - left)
     const valueX = invertedRange(range(i, 0, width), minX, maxX)
-    let valueY = expr(valueX)
-    valueY = isFinite(valueY) ? valueY.toFixed(2) : 'NaN'
+    const rawY = expr(valueX)
+    const valueY = isFinite(rawY) ? rawY.toFixed(2) : 'NaN'
 
-    const relY = clamp(yPositions.current[i * window.devicePixelRatio] / window.devicePixelRatio, 0, height)
+    const relY = clamp(yPositions[i * window.devicePixelRatio] / window.devicePixelRatio, 0, height)
 
-    setToolTipValues({ x: valueX.toFixed(2), y: valueY })
+    toolTipValues.set({ x: valueX.toFixed(2), y: valueY })
     set({ x: left + i - 3, y: top + relY - 5 + 2 })
   })
 
   return (
-    <Wrapper onMouseEnter={() => toggleToolTip(true)} onMouseLeave={() => toggleToolTip(false)}>
+    <Wrapper onMouseEnter={() => toolTipOpen.set(true)} onMouseLeave={() => toolTipOpen.set(false)}>
       <Canvas innerRef={canvas} {...bind()} />
-      {toolTipOpen && (
-        <Components.Portal>
-          <Dot innerRef={dotRef}>
-            <ToolTip>
-              x: {toolTipValues.x}
-              <br />
-              y: {toolTipValues.y}
-            </ToolTip>
-          </Dot>
-        </Components.Portal>
-      )}
+      {() =>
+        toolTipOpen() && (
+          <Components.Portal>
+            <Dot innerRef={dotRef}>
+              <ToolTip>
+                {() => `x: ${toolTipValues().x}`}
+                <br />
+                {() => `y: ${toolTipValues().y}`}
+              </ToolTip>
+            </Dot>
+          </Components.Portal>
+        )
+      }
     </Wrapper>
   )
-})
+}
