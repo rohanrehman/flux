@@ -1,16 +1,21 @@
-import { useEffect, useMemo, useCallback, useState, useRef, type Inputs } from 'preact/hooks'
+import { effect, untrack, cleanup, type Computed } from '@madenowhere/phaze'
 import { fluxStore } from './store'
 import { folder } from './helpers'
-import { useDeepMemo, useValuesForPath } from './hooks'
+import { useValuesForPath } from './hooks'
 import { useRenderRoot } from './components/Flux'
 import type { FolderSettings, Schema, SchemaToValues, StoreType, OnChangeHandler } from './types'
-import { shallow } from 'zustand/shallow'
+
+// Preact-era `Inputs` type, inlined so we don't reach into preact/hooks.
+// Deps are accepted for API parity with the preact version but are not
+// used for re-running schema in phaze — reactivity handles dep changes
+// via signal reads inside the schema function.
+type Inputs = readonly unknown[] | undefined
 
 export type HookSettings = { store?: StoreType; headless?: boolean }
 export type SchemaOrFn<S extends Schema = Schema> = S | (() => S)
 
 type FunctionReturnType<S extends Schema> = [
-  SchemaToValues<S>,
+  Computed<SchemaToValues<S>>,
   (value: {
     [K in keyof Partial<SchemaToValues<S, true>>]: SchemaToValues<S, true>[K]
   }) => void,
@@ -20,7 +25,7 @@ type FunctionReturnType<S extends Schema> = [
 type ReturnType<F extends SchemaOrFn> = F extends SchemaOrFn<infer S>
   ? F extends Function
     ? FunctionReturnType<S>
-    : SchemaToValues<S>
+    : Computed<SchemaToValues<S>>
   : never
 
 export type HookReturnType<F extends SchemaOrFn | string, G extends SchemaOrFn> = F extends SchemaOrFn
@@ -75,6 +80,13 @@ export function parseArgs(
 }
 
 /**
+ * Phaze-native `useControls`. Component bodies in phaze run once, so this
+ * hook's setup work is synchronous: parse the schema, register data,
+ * wire subscriptions, return reactive accessors. Cleanup parents to the
+ * caller's component scope via `effect()` + `cleanup()`.
+ *
+ * Signature is unchanged for static schemas. Function schemas now return
+ * `[Computed<values>, set, get]` instead of `[values, set, get]`.
  *
  * @param schemaOrFolderName
  * @param settingsOrDepsOrSchema
@@ -88,150 +100,111 @@ export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, 
   depsOrSettings?: Inputs | HookSettings,
   depsOrUndefined?: Inputs
 ): HookReturnType<F, G> {
-  // We parse the args
-  const { folderName, schema, folderSettings, hookSettings, deps } = useMemo(
-    () =>
-      parseArgs(
-        schemaOrFolderName,
-        settingsOrDepsOrSchema,
-        depsOrSettingsOrFolderSettings,
-        depsOrSettings,
-        depsOrUndefined
-      ),
-    [schemaOrFolderName, settingsOrDepsOrSchema, depsOrSettingsOrFolderSettings, depsOrSettings, depsOrUndefined]
+  const { folderName, schema, folderSettings, hookSettings } = parseArgs(
+    schemaOrFolderName,
+    settingsOrDepsOrSchema,
+    depsOrSettingsOrFolderSettings,
+    depsOrSettings,
+    depsOrUndefined
   )
 
   const schemaIsFunction = typeof schema === 'function'
 
-  // Keep track of deps to see if they changed and if there's need to recompute.
-  const depsChanged = useRef(false)
-  // We will only override the store settings and options when deps have changed
-  // and it isn't the first render
-  const firstRender = useRef(true)
-
-  // Since the schema object would change on every render, we let the user have
-  // control over when it should trigger a reset of the hook inputs.
-  const _schema = useDeepMemo(() => {
-    depsChanged.current = true
-    const s = typeof schema === 'function' ? schema() : schema
-    return folderName ? { [folderName]: folder(s, folderSettings) } : s
-  }, deps)
+  const rawSchema = typeof schema === 'function' ? (schema as () => Schema)() : schema
+  const _schema = folderName ? { [folderName]: folder(rawSchema, folderSettings) } : rawSchema
 
   // GlobalPanel means that no store was provided, therefore we're using the fluxStore
   const isGlobalPanel = !hookSettings?.store
   const headless = hookSettings?.headless ?? false
 
   useRenderRoot(isGlobalPanel && !headless)
-  const [store] = useState(() => hookSettings?.store || fluxStore)
+
+  const store = hookSettings?.store || fluxStore
 
   /**
-   * Parses the schema to extract the inputs initial data.
-   *
-   * This initial data will be used to initialize the store.
-   *
-   * Note that getDataFromSchema recursively
-   * parses the schema inside nested folder.
+   * Parses the schema to extract the inputs initial data. Recursively
+   * flattens nested folders.
    */
-  const [initialData, mappedPaths] = useMemo(() => store.getDataFromSchema(_schema), [store, _schema])
-  const [allPaths, renderPaths, onChangePaths, onEditStartPaths, onEditEndPaths] = useMemo(() => {
-    const allPaths: string[] = []
-    const renderPaths: string[] = []
-    const onChangePaths: Record<string, OnChangeHandler> = {}
-    const onEditStartPaths: Record<string, (...args: any) => void> = {}
-    const onEditEndPaths: Record<string, (...args: any) => void> = {}
+  const [initialData, mappedPaths] = store.getDataFromSchema(_schema)
 
-    Object.values(mappedPaths).forEach(({ path, onChange, onEditStart, onEditEnd, transient }) => {
-      allPaths.push(path)
-      if (onChange) {
-        onChangePaths[path] = onChange
-        if (!transient) {
-          renderPaths.push(path)
-        }
-      } else {
-        renderPaths.push(path)
-      }
+  const allPaths: string[] = []
+  const renderPaths: string[] = []
+  const onChangePaths: Record<string, OnChangeHandler> = {}
+  const onEditStartPaths: Record<string, (...args: any) => void> = {}
+  const onEditEndPaths: Record<string, (...args: any) => void> = {}
 
-      if (onEditStart) {
-        onEditStartPaths[path] = onEditStart
-      }
-      if (onEditEnd) {
-        onEditEndPaths[path] = onEditEnd
-      }
-    })
-    return [allPaths, renderPaths, onChangePaths, onEditStartPaths, onEditEndPaths]
-  }, [mappedPaths])
+  Object.values(mappedPaths).forEach(({ path, onChange, onEditStart, onEditEnd, transient }) => {
+    allPaths.push(path)
+    if (onChange) {
+      onChangePaths[path] = onChange
+      if (!transient) renderPaths.push(path)
+    } else {
+      renderPaths.push(path)
+    }
+    if (onEditStart) onEditStartPaths[path] = onEditStart
+    if (onEditEnd) onEditEndPaths[path] = onEditEnd
+  })
 
   // Extracts the paths from the initialData and ensures order of paths.
-  const paths = useMemo(() => store.orderPaths(allPaths), [allPaths, store])
+  const paths = store.orderPaths(allPaths)
 
   /**
-   * Reactive hook returning the values from the store at given paths.
-   * Essentially it flattens the keys of a nested structure.
-   * For example { "folder.subfolder.valueKey": value } becomes { valueKey: value }
-   *
-   * initalData is going to be returned on the first render. Subsequent renders
-   * will call the store data.
-   * */
+   * Reactive flattened values. Reading inside JSX or another reactive
+   * scope subscribes only to the requested paths.
+   */
   const values = useValuesForPath(store, renderPaths, initialData)
 
-  const set = useCallback(
-    (values: Record<string, any>) => {
-      const _values = Object.entries(values).reduce(
-        (acc, [p, v]) => Object.assign(acc, { [mappedPaths[p].path]: v }),
-        {}
-      )
-      store.set(_values, false)
-    },
-    [store, mappedPaths]
-  )
+  // Initialize the store with initial data and arrange disposal on
+  // component unmount. The effect runs once (no tracked deps); cleanup
+  // fires when the parent owner (component) disposes.
+  effect(() => {
+    store.addData(initialData, false)
+    cleanup(() => store.disposePaths(paths))
+  })
 
-  const get = useCallback((path: string) => store.get(mappedPaths[path].path), [store, mappedPaths])
-
-  useEffect(() => {
-    // We initialize the store with the initialData in useEffect.
-    // Note that doing this while rendering (ie in useMemo) would make
-    // things easier and remove the need for initializing useValuesForPath but
-    // it breaks the ref from Monitor.
-
-    // we override the settings when deps have changed and this isn't the first
-    // render
-    const shouldOverrideSettings = !firstRender.current && depsChanged.current
-    store.addData(initialData, shouldOverrideSettings)
-    firstRender.current = false
-    depsChanged.current = false
-    return () => store.disposePaths(paths)
-  }, [store, paths, initialData])
-
-  useEffect(() => {
-    // let's handle transient subscriptions
-    const unsubscriptions: (() => void)[] = []
-    Object.entries(onChangePaths).forEach(([path, onChange]) => {
-      onChange(store.get(path), path, { initial: true, get: store.get, ...store.getInput(path)! })
-      const unsub = store.useStore.subscribe(
-        (s) => {
-          const input = s.data[path]
-          // @ts-ignore
-          const value = input.disabled ? undefined : input.value
-          return [value, input]
-        },
-        ([value, input]) => onChange(value, path, { initial: false, get: store.get, ...input }),
-        { equalityFn: shallow }
-      )
-      unsubscriptions.push(unsub)
+  // onChange subscriptions: phaze effects fire on registration AND on
+  // dep changes, so a single effect replaces the preact "initial call +
+  // subscribe" pattern. The `isFirstRun` flag carries the `initial` arg.
+  Object.entries(onChangePaths).forEach(([path, onChange]) => {
+    let isFirstRun = true
+    effect(() => {
+      const input = store.state.data[path]
+      if (!input) return
+      // Spread to track every property of the input proxy. Matches the
+      // preact-era subscription which fired on any input change.
+      const snapshot = { ...(input as object) } as any
+      const value = snapshot.disabled ? undefined : snapshot.value
+      untrack(() => {
+        onChange(value, path, { initial: isFirstRun, get: store.get, ...snapshot })
+        isFirstRun = false
+      })
     })
-    return () => unsubscriptions.forEach((unsub) => unsub())
-  }, [store, onChangePaths])
+  })
 
-  useEffect(() => {
-    const unsubscriptions: Array<() => void> = []
-    Object.entries(onEditStartPaths).forEach(([path, onEditStart]) =>
-      unsubscriptions.push(store.subscribeToEditStart(path, onEditStart))
+  // onEditStart / onEditEnd: subscriptions to event-emitter, dispose on
+  // component unmount.
+  Object.entries(onEditStartPaths).forEach(([path, onEditStart]) => {
+    effect(() => {
+      const unsub = store.subscribeToEditStart(path, onEditStart)
+      cleanup(unsub)
+    })
+  })
+  Object.entries(onEditEndPaths).forEach(([path, onEditEnd]) => {
+    effect(() => {
+      const unsub = store.subscribeToEditEnd(path, onEditEnd)
+      cleanup(unsub)
+    })
+  })
+
+  const set = (next: Record<string, any>) => {
+    const _values = Object.entries(next).reduce(
+      (acc, [p, v]) => Object.assign(acc, { [mappedPaths[p].path]: v }),
+      {}
     )
-    Object.entries(onEditEndPaths).forEach(([path, onEditEnd]) =>
-      unsubscriptions.push(store.subscribeToEditEnd(path, onEditEnd))
-    )
-    return () => unsubscriptions.forEach((unsub) => unsub())
-  }, [onEditStartPaths, onEditEndPaths, store])
+    store.set(_values, false)
+  }
+
+  const get = (path: string) => store.get(mappedPaths[path].path)
 
   if (schemaIsFunction) return [values, set, get] as HookReturnType<F, G>
   return values as HookReturnType<F, G>

@@ -1,10 +1,8 @@
 /**
- * Headless version of useControls
- * Automatically passes { headless: true } to prevent UI rendering
+ * Headless version of useControls.
+ * Automatically passes { headless: true } to prevent UI rendering.
  */
 
-import { useMemo } from 'preact/hooks'
-import type { Inputs } from 'preact/hooks'
 import {
   useControls as useControlsBase,
   parseArgs,
@@ -15,28 +13,20 @@ import {
 import type { Schema, FolderSettings } from '../types'
 import { reconstructArgsWithHeadless } from './useControls.utils'
 
+// Preact-era `Inputs` type, inlined for parity. Deps are accepted but
+// not used to re-run schema in phaze.
+type Inputs = readonly unknown[] | undefined
+
 /**
- * Headless version of useControls that manages state without rendering UI.
+ * Headless `useControls` — manages state without rendering UI.
  *
- * This hook provides the same functionality as the standard useControls,
- * but automatically injects { headless: true } to prevent the default
- * Flux panel from rendering. This is useful for building custom UIs,
- * WebXR interfaces, or any scenario where you want Flux's state management
- * without the default HTML controls.
+ * Same surface as `useControls` from `'flux'`, with `{ headless: true }`
+ * injected into hookSettings so no Flux panel mounts. Component bodies
+ * in phaze run once, so the previous useMemo memoization for parseArgs /
+ * arg reconstruction collapses to plain calls (Pattern 3).
  *
  * @see {@link https://github.com/rohanrehman/flux#headless-mode | Headless Mode Documentation}
- * @see useControls from 'flux' for full API documentation and examples
- *
- * @example
- * ```tsx
- * import { useControls } from 'flux/headless'
- *
- * function MyComponent() {
- *   const values = useControls({ x: 1, y: 2 })
- *   // Flux panel won't render, but state is still managed
- *   return <div>{values.x}, {values.y}</div>
- * }
- * ```
+ * @see useControls from 'flux' for full API documentation and examples.
  */
 export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, G extends SchemaOrFn<S>>(
   schemaOrFolderName: F,
@@ -45,42 +35,23 @@ export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, 
   depsOrSettings?: Inputs | HookSettings,
   depsOrUndefined?: Inputs
 ): HookReturnType<F, G> {
-  // Parse arguments to understand structure
-  const { folderName, hookSettings } = useMemo(
-    () =>
-      parseArgs(
-        schemaOrFolderName,
-        settingsOrDepsOrSchema,
-        depsOrSettingsOrFolderSettings,
-        depsOrSettings,
-        depsOrUndefined
-      ),
-    [schemaOrFolderName, settingsOrDepsOrSchema, depsOrSettingsOrFolderSettings, depsOrSettings, depsOrUndefined]
+  const { folderName, hookSettings } = parseArgs(
+    schemaOrFolderName,
+    settingsOrDepsOrSchema,
+    depsOrSettingsOrFolderSettings,
+    depsOrSettings,
+    depsOrUndefined
   )
 
-  // Reconstruct arguments with modified settings, ensuring single unconditional hook call
-  // Always inject headless: true into hook settings
-  const modifiedArgs = useMemo<Parameters<typeof useControlsBase>>(
-    () =>
-      reconstructArgsWithHeadless({
-        folderName,
-        schemaOrFolderName,
-        settingsOrDepsOrSchema,
-        depsOrSettingsOrFolderSettings,
-        depsOrSettings,
-        depsOrUndefined,
-        hookSettings,
-      }),
-    [
-      folderName,
-      schemaOrFolderName,
-      settingsOrDepsOrSchema,
-      depsOrSettingsOrFolderSettings,
-      depsOrSettings,
-      depsOrUndefined,
-      hookSettings,
-    ]
-  )
+  const modifiedArgs = reconstructArgsWithHeadless({
+    folderName,
+    schemaOrFolderName,
+    settingsOrDepsOrSchema,
+    depsOrSettingsOrFolderSettings,
+    depsOrSettings,
+    depsOrUndefined,
+    hookSettings,
+  }) as Parameters<typeof useControlsBase>
 
   return useControlsBase(...modifiedArgs) as HookReturnType<F, G>
 }

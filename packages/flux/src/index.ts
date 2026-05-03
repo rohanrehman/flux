@@ -36,8 +36,9 @@ export { Flux, FluxPanel } from './components/Flux'
 export { useStoreContext, FluxStoreProvider } from './context'
 
 // export the fluxStore (default store)
-// hook to create custom store
-export { fluxStore, useCreateStore } from './store'
+// factory to create custom store (renamed from useCreateStore in the
+// phaze migration — phaze components run once, so no useMemo equivalent)
+export { fluxStore, createStore } from './store'
 
 // export folder, monitor, button
 export * from './helpers'

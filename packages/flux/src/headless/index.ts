@@ -9,8 +9,9 @@
 // Export headless version of useControls
 export { useControls } from './useControls'
 
-// Store and store management
-export { fluxStore, useCreateStore } from '../store'
+// Store and store management (factory renamed from useCreateStore in the
+// phaze migration; consumers create stores outside hook semantics)
+export { fluxStore, createStore } from '../store'
 
 // Hooks for accessing store data
 export { useInput } from '../hooks/useInput'

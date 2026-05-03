@@ -1,9 +1,11 @@
 /**
- * Convenience hooks for building custom UIs with Flux headless
+ * Convenience hooks for building custom UIs with Flux headless.
+ *
+ * These functions return phaze `Computed<T>` accessors. Read them via
+ * `result()` inside JSX or an effect/computed to subscribe.
  */
 
-import { useMemo, useState, useEffect, useCallback } from 'preact/hooks'
-import { shallow } from 'zustand/shallow'
+import { computed, type Computed } from '@madenowhere/phaze'
 import { fluxStore } from '../store'
 import { useVisiblePaths } from '../hooks/useVisiblePaths'
 import { buildTree } from '../components/Flux/tree'
@@ -12,7 +14,6 @@ import type { StoreType, DataInput, Tree, Data, DataItem } from '../types/intern
 // Input type without the internal __refCount property
 type Input = Omit<DataItem, '__refCount'>
 
-// Helper to get input at path (from useInput.ts)
 const getInputAtPath = (data: Data, path: string): Input | null => {
   if (!data[path]) return null
   const { __refCount, ...input } = data[path]
@@ -20,88 +21,65 @@ const getInputAtPath = (data: Data, path: string): Input | null => {
 }
 
 /**
- * Returns an array of all visible inputs with their full metadata.
+ * Reactive accessor for all visible inputs with their full metadata.
  * Useful for rendering a flat list of controls.
- *
- * @param store - Optional custom store (defaults to global fluxStore)
- * @returns Array of objects containing path and input metadata
  *
  * @example
  * ```tsx
  * const inputs = useFluxInputs()
- * inputs.forEach(({ path, input }) => {
- *   console.log(`${path}: ${input.value}`)
+ * effect(() => {
+ *   for (const { path, input } of inputs()) console.log(path, input.value)
  * })
  * ```
  */
-export function useFluxInputs(store: StoreType = fluxStore) {
+export function useFluxInputs(
+  store: StoreType = fluxStore
+): Computed<{ path: string; input: DataInput }[]> {
   const paths = useVisiblePaths(store)
-
-  return useMemo(() => {
-    const data = store.getData()
-    return paths.map((path) => ({
-      path,
-      input: data[path] as DataInput,
-    }))
-  }, [store, paths])
+  return computed(() => {
+    const data = store.state.data
+    return paths().map((path) => ({ path, input: data[path] as DataInput }))
+  })
 }
 
 /**
- * Returns the folder tree structure of all visible inputs.
+ * Reactive accessor for the folder tree structure of all visible inputs.
  * Useful for rendering hierarchical/folder-based UIs.
- *
- * @param store - Optional custom store (defaults to global fluxStore)
- * @param filter - Optional filter string to search input names
- * @returns Tree structure with folders and inputs
- *
- * @example
- * ```tsx
- * const tree = useFluxTree()
- * // tree = { folder1: { input1: {...}, input2: {...} }, input3: {...} }
- * ```
  */
-export function useFluxTree(store: StoreType = fluxStore, filter?: string): Tree {
+export function useFluxTree(
+  store: StoreType = fluxStore,
+  filter?: string
+): Computed<Tree> {
   const paths = useVisiblePaths(store)
-  return useMemo(() => buildTree(paths, filter), [paths, filter])
+  return computed(() => buildTree(paths(), filter))
 }
 
 /**
- * Hook to get and control a specific input by path.
- * Works without context - uses store parameter directly.
+ * Reactive accessor for a specific input plus imperative control methods.
+ * Works without context — uses the store parameter directly.
  *
- * @param path - The path to the input (e.g., "folder.myNumber")
- * @param store - Optional custom store (defaults to global fluxStore)
- * @returns Object with input data and control methods, or null if input doesn't exist
+ * @returns A `Computed<T | null>` where T contains the input data and
+ *   control methods, or `null` if the input doesn't exist.
  *
  * @example
  * ```tsx
- * const input = useFluxInput("myFolder.count")
- * if (input) {
- *   console.log(input.value, input.type, input.settings)
- *   input.set(newValue)
- * }
+ * const handle = useFluxInput("myFolder.count")
+ * effect(() => {
+ *   const h = handle()
+ *   if (h) console.log(h.input.value, h.input.type)
+ * })
  * ```
  */
 export function useFluxInput(path: string, store: StoreType = fluxStore) {
-  const [input, setInput] = useState<Input | null>(() => getInputAtPath(store.getData(), path))
+  const set = (value: any) => store.setValueAtPath(path, value, true)
+  const setSettings = (settings: any) => store.setSettingsAtPath(path, settings)
+  const disable = (flag: boolean) => store.disableInputAtPath(path, flag)
+  const emitOnEditStart = () => store.emitOnEditStart(path)
+  const emitOnEditEnd = () => store.emitOnEditEnd(path)
 
-  // Subscribe to changes in the input at this path
-  useEffect(() => {
-    setInput(getInputAtPath(store.getData(), path))
-    const unsub = store.useStore.subscribe((s) => getInputAtPath(s.data, path), setInput, { equalityFn: shallow })
-    return () => unsub()
-  }, [store, path])
-
-  // Memoize control methods
-  const set = useCallback((value: any) => store.setValueAtPath(path, value, true), [path, store])
-  const setSettings = useCallback((settings: any) => store.setSettingsAtPath(path, settings), [path, store])
-  const disable = useCallback((flag: boolean) => store.disableInputAtPath(path, flag), [path, store])
-  const emitOnEditStart = useCallback(() => store.emitOnEditStart(path), [path, store])
-  const emitOnEditEnd = useCallback(() => store.emitOnEditEnd(path), [path, store])
-
-  return useMemo(() => {
+  return computed(() => {
+    const input = getInputAtPath(store.state.data, path)
     if (!input) return null
-
     return {
       path,
       input,
@@ -112,5 +90,5 @@ export function useFluxInput(path: string, store: StoreType = fluxStore) {
       emitOnEditEnd,
       storeId: store.storeId,
     }
-  }, [input, path, set, setSettings, disable, emitOnEditStart, emitOnEditEnd, store.storeId])
+  })
 }
