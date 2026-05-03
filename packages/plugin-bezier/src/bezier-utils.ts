@@ -1,11 +1,13 @@
-import { useCallback } from 'preact/hooks'
+// Phaze migration: useCallback ceremony was preact-era — phaze
+// components run once so the inner closures are already stable. The
+// hook factories collapse to plain functions returning the helper.
 
 export const useRange = () => {
-  return useCallback((v: number, size: number) => size * v, [])
+  return (v: number, size: number) => size * v
 }
 
 export const useInvertedRange = () => {
-  return useCallback((v: number, size: number) => v / size, [])
+  return (v: number, size: number) => v / size
 }
 
 /**

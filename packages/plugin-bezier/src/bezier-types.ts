@@ -1,4 +1,4 @@
-import type { FluxInputProps, InternalVectorSettings, MergedInputWithSettings } from 'flux/plugin'
+import type { FluxInputProps, InternalVectorSettings, MergedInputWithSettings } from '@rohanrehman/flux/plugin'
 
 export type BuiltInKeys =
   | 'ease'

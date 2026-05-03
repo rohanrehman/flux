@@ -1,5 +1,6 @@
-import { useMemo } from 'preact/hooks'
-import { useInputContext, useInputSetters, Components } from 'flux/plugin'
+/** @jsxImportSource @madenowhere/phaze */
+import { computed } from '@madenowhere/phaze'
+import { useInputContext, useInputSetters, Components } from '@rohanrehman/flux/plugin'
 import { BezierSvg } from './BezierSvg'
 import type { BezierProps } from './bezier-types'
 import { BezierPreview } from './BezierPreview'
@@ -13,14 +14,15 @@ const optionValues = [false, ...Object.values(BuiltIn).map((c) => c.toString())]
 const selectSettings = { keys: optionKeys, values: optionValues }
 
 function SelectBezier({ value, onUpdate }: Pick<BezierProps, 'value' | 'onUpdate'>) {
-  const selectValue = useMemo(() => optionValues.find((v) => v === value.toString()) || false, [value])
-  const args = { type: 'SELECT', value: selectValue, settings: selectSettings }
+  // computed → memoized derived value (replaces useMemo)
+  const selectValue = computed(() => optionValues.find((v) => v === value.toString()) || false)
+  const args = { type: 'SELECT', value: selectValue(), settings: selectSettings }
   const setValue = (newValue: string | boolean) => newValue && onUpdate((newValue as string).split(','))
   const select = useInputSetters({ ...args, setValue })
   return (
     <Select
-      value={selectValue}
-      displayValue={select.displayValue}
+      value={selectValue()}
+      displayValue={select.displayValue() as any}
       onUpdate={select.onUpdate}
       settings={selectSettings}
     />

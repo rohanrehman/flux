@@ -1,4 +1,4 @@
-import { normalizeVector, sanitizeVector } from 'flux/plugin'
+import { normalizeVector, sanitizeVector } from '@rohanrehman/flux/plugin'
 import { bezier } from './bezier-utils'
 import type { BezierArray, BezierInput, InternalBezierSettings, InternalBezier, BuiltInKeys } from './bezier-types'
 

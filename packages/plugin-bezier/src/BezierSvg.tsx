@@ -1,6 +1,7 @@
-import { useMemo, useRef } from 'preact/hooks'
-import useMeasure from 'react-use-measure'
-import { mergeRefs, useDrag, type DragState } from 'flux/plugin'
+/** @jsxImportSource @madenowhere/phaze */
+import { signal, computed } from '@madenowhere/phaze'
+import { mergeRefs, useDrag, type DragState } from '@rohanrehman/flux/plugin'
+import { useMeasure } from './useMeasure'
 import { useRange, useInvertedRange } from './bezier-utils'
 import { Svg } from './StyledBezier'
 import type { Bezier as BezierType, BezierProps } from './bezier-types'
@@ -29,11 +30,13 @@ export function BezierSvg({
 }: Pick<BezierProps, 'displayValue' | 'onUpdate'> & { withPreview: boolean }) {
   const r = useRange()
   const ir = useInvertedRange()
-  const [ref, { width, height }] = useMeasure()
-  const svgRef = useRef<SVGSVGElement>(null)
-  const handleLeft = useRef<SVGCircleElement>(null)
-  const handleRight = useRef<SVGCircleElement>(null)
-  const bounds = useRef<DOMRect>()
+  const [measureRef, size] = useMeasure<SVGSVGElement>()
+  const svgRef = signal<SVGSVGElement>()
+  const handleLeft = signal<SVGCircleElement>()
+  const handleRight = signal<SVGCircleElement>()
+  // Drag bounds — phaze components run once, so a plain mutable local
+  // persists for the row's lifetime (Pattern 5).
+  let bounds: DOMRect | undefined
 
   const bind = useDrag((state: DragState) => {
     const {
@@ -45,14 +48,18 @@ export function BezierSvg({
     let currentMemo = memo as number | undefined
 
     if (first) {
-      bounds.current = svgRef.current!.getBoundingClientRect()
-      currentMemo = [handleLeft.current, handleRight.current].indexOf(event!.target as any)
-      if (currentMemo < 0) currentMemo = x - bounds.current.left < width / 2 ? 0 : 1
+      const svg = svgRef()
+      if (!svg) return memo
+      bounds = svg.getBoundingClientRect()
+      currentMemo = [handleLeft(), handleRight()].indexOf(event!.target as any)
+      if (currentMemo < 0) currentMemo = x - bounds.left < size().width / 2 ? 0 : 1
       currentMemo *= 2
     }
 
-    const relX = x - bounds.current!.left
-    const relY = y - bounds.current!.top
+    if (!bounds) return memo
+    const { width, height } = size()
+    const relX = x - bounds.left
+    const relY = y - bounds.top
 
     onUpdate((v: BezierType) => {
       const newV = [...v]
@@ -66,8 +73,10 @@ export function BezierSvg({
 
   const { x1, y1, x2, y2 } = displayValue
 
-  const { sx, sy, ex, ey, cx1, cy1, cx2, cy2 } = useMemo(
-    () => ({
+  // Reactive geometry — recomputes when size() changes.
+  const geom = computed(() => {
+    const { width, height } = size()
+    return {
       sx: r(0, width),
       sy: r(1, height),
       ex: r(1, width),
@@ -76,21 +85,33 @@ export function BezierSvg({
       cy1: r(1 - y1, height),
       cx2: r(x2, width),
       cy2: r(1 - y2, height),
-    }),
-    [r, x1, y1, x2, y2, width, height]
-  )
+    }
+  })
 
   return (
-    <Svg innerRef={mergeRefs([svgRef, ref])} {...bind()} withPreview={withPreview}>
-      <line x1={sx} y1={sy} x2={ex} y2={ey} />
-      <path fill="none" d={`M${sx},${sy} C${cx1},${cy1} ${cx2},${cy2} ${ex},${ey}`} strokeLinecap="round" />
+    <Svg innerRef={mergeRefs([svgRef, measureRef])} {...bind()} withPreview={withPreview}>
+      <line x1={() => geom().sx} y1={() => geom().sy} x2={() => geom().ex} y2={() => geom().ey} />
+      <path
+        fill="none"
+        d={() => {
+          const g = geom()
+          return `M${g.sx},${g.sy} C${g.cx1},${g.cy1} ${g.cx2},${g.cy2} ${g.ex},${g.ey}`
+        }}
+        strokeLinecap="round"
+      />
       <g>
-        <Line sx={sx} sy={sy} cx={cx1} cy={cy1} />
-        <circle ref={handleLeft} cx={cx1} cy={cy1} r={HANDLE_RADIUS} />
+        {() => {
+          const g = geom()
+          return <Line sx={g.sx} sy={g.sy} cx={g.cx1} cy={g.cy1} />
+        }}
+        <circle ref={handleLeft as any} cx={() => geom().cx1} cy={() => geom().cy1} r={HANDLE_RADIUS} />
       </g>
       <g>
-        <Line sx={ex} sy={ey} cx={cx2} cy={cy2} />
-        <circle ref={handleRight} cx={cx2} cy={cy2} r={HANDLE_RADIUS} />
+        {() => {
+          const g = geom()
+          return <Line sx={g.ex} sy={g.ey} cx={g.cx2} cy={g.cy2} />
+        }}
+        <circle ref={handleRight as any} cx={() => geom().cx2} cy={() => geom().cy2} r={HANDLE_RADIUS} />
       </g>
     </Svg>
   )

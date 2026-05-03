@@ -1,4 +1,4 @@
-import { createPlugin, formatVector } from 'flux/plugin'
+import { createPlugin, formatVector } from '@rohanrehman/flux/plugin'
 import { Bezier } from './Bezier'
 import { normalize, sanitize } from './bezier-plugin'
 import { InternalBezierSettings } from './bezier-types'
