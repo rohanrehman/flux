@@ -32,8 +32,11 @@ export { useControls } from './useControls'
 // panel components
 export { Flux, FluxPanel } from './components/Flux'
 
-// simplifies passing store as context
-export { useStoreContext, FluxStoreProvider } from './context'
+// store accessor — returns the active store. Phaze migration drops the
+// FluxStoreProvider component (no createContext/useContext primitives in
+// phaze); apps with multiple panel roots can call setActiveStore() directly
+// before mounting their <FluxPanel store={x}>.
+export { useStoreContext, setActiveStore } from './context'
 
 // export the fluxStore (default store)
 // factory to create custom store (renamed from useCreateStore in the

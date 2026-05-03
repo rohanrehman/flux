@@ -1,16 +1,18 @@
-import { useMemo, useState, useEffect } from 'preact/hooks'
-import type { JSX, ComponentChildren } from 'preact'
-import { memo } from '../../utils/memo'
+/** @jsxImportSource @madenowhere/phaze */
+import { signal, effect, cleanup, computed } from '@madenowhere/phaze'
+import type { JSXChild } from '@madenowhere/phaze'
 import { buildTree } from './tree'
 import { TreeWrapper } from '../Folder'
 
-import { useDeepMemo, useTransform, useVisiblePaths } from '../../hooks'
+import { useTransform, useVisiblePaths } from '../../hooks'
 
 import { StyledRoot } from './StyledRoot'
 import { mergeTheme, FluxCustomTheme } from '../../styles'
-import { ThemeContext, StoreContext, PanelSettingsContext } from '../../context'
+import { setActiveTheme, setActiveStore, setActivePanelSettings } from '../../context'
 import { TitleWithFilter } from './Filter'
 import { StoreType } from '../../types'
+
+type CSSProps = Record<string, string | number | undefined>
 
 export type FluxRootProps = {
   /**
@@ -58,33 +60,12 @@ export type FluxRootProps = {
   titleBar?:
     | boolean
     | {
-        /**
-         * Overwrites the default title content (6 dots if drag is enabled) if set to a non undefined value.
-         */
-        title?: ComponentChildren
-        /**
-         * Toggle whether the flux panel can be dragged around via the title bar.
-         */
+        title?: JSXChild
         drag?: boolean
-        /**
-         * Toggle whether filtering should be enabled or disabled.
-         */
         filter?: boolean
-        /**
-         * The position(x and y coordinates) of the flux panel.
-         */
         position?: { x?: number; y?: number }
-        /**
-         * The callback is called when the flux panel is dragged.
-         */
         onDrag?: (position: { x?: number; y?: number }) => void
-        /**
-         * The callback is called when the flux panel starts to be dragged.
-         */
         onDragStart?: (position: { x?: number; y?: number }) => void
-        /**
-         * The callback is called when the flux panel stops being dragged.
-         */
         onDragEnd?: (position: { x?: number; y?: number }) => void
       }
   /**
@@ -98,126 +79,144 @@ export type FluxRootProps = {
 }
 
 export function FluxRoot({ store, hidden = false, theme, collapsed = false, glass, ...props }: FluxRootProps) {
-  const themeContext = useDeepMemo(() => mergeTheme(theme ?? undefined), [theme])
+  // Theme is a one-time merge — phaze components run once, so the theme
+  // computed at mount stays stable for the panel's lifetime. To switch
+  // themes the user re-mounts <Flux>, same as preact-era behavior.
+  const themeContext = mergeTheme(theme ?? undefined)
   const glassEnabled = glass ?? (themeContext.theme.glass?.enabled === 'true')
-  // collapsible
-  const [toggled, setToggle] = useState(!collapsed)
 
-  const computedToggled = typeof collapsed === 'object' ? !collapsed.collapsed : toggled
-  const computedSetToggle = useMemo(() => {
+  // Set the global theme signal so all consumers (StyledRoot, useTh, etc.)
+  // can read it. cleanup() clears it on unmount so a parent that unmounts
+  // <Flux> doesn't leak a stale theme into the next mount.
+  effect(() => {
+    setActiveTheme(themeContext as any)
+    cleanup(() => setActiveTheme(null))
+  })
+
+  // Collapsible state. Internal mode: signal we own. Controlled mode:
+  // mirror the prop into a computed so reads track changes from outside.
+  const internalToggle = signal(!collapsed)
+  const computedToggled = computed(() =>
+    typeof collapsed === 'object' ? !collapsed.collapsed : internalToggle()
+  )
+  const computedSetToggle = (value: boolean | ((prev: boolean) => boolean)) => {
     if (typeof collapsed === 'object') {
-      return (value: boolean | ((prev: boolean) => boolean)) => {
-        if (typeof value === 'function') {
-          collapsed.onChange(!value(!collapsed.collapsed))
-        } else {
-          collapsed.onChange(!value)
-        }
+      if (typeof value === 'function') {
+        collapsed.onChange(!value(!collapsed.collapsed))
+      } else {
+        collapsed.onChange(!value)
       }
+    } else {
+      const v = typeof value === 'function' ? value(internalToggle()) : value
+      internalToggle.set(v)
     }
-    return setToggle
-  }, [collapsed])
+  }
 
   if (!store || hidden) return null
 
   return (
-    <ThemeContext.Provider value={themeContext}>
-      <FluxCore
-        store={store}
-        {...props}
-        glass={glassEnabled}
-        toggled={computedToggled}
-        setToggle={computedSetToggle}
-        rootStyle={themeContext.style}
-      />
-    </ThemeContext.Provider>
+    <FluxCore
+      store={store}
+      {...props}
+      glass={glassEnabled}
+      toggled={computedToggled}
+      setToggle={computedSetToggle}
+      rootStyle={themeContext.style as any}
+    />
   )
 }
 
 type FluxCoreProps = Omit<FluxRootProps, 'theme' | 'hidden' | 'collapsed'> & {
   store: StoreType
-  rootStyle: JSX.CSSProperties
-  toggled: boolean
+  rootStyle: CSSProps
+  toggled: () => boolean
   glass: boolean
   setToggle: (value: boolean | ((prev: boolean) => boolean)) => void
 }
 
-const FluxCore = memo(
-  ({
-    store,
-    rootStyle,
-    fill = false,
-    flat = false,
-    glass = false,
-    neverHide = false,
-    oneLineLabels = false,
-    titleBar = {
-      title: undefined,
-      drag: true,
-      filter: true,
-      position: undefined,
-      onDrag: undefined,
-      onDragStart: undefined,
-      onDragEnd: undefined,
-    },
-    hideCopyButton = false,
-    toggled,
-    setToggle,
-  }: FluxCoreProps) => {
-    const paths = useVisiblePaths(store)
-    const [filter, setFilter] = useState('')
-    const tree = useMemo(() => buildTree(paths, filter), [paths, filter])
+function FluxCore({
+  store,
+  rootStyle,
+  fill = false,
+  flat = false,
+  glass = false,
+  neverHide = false,
+  oneLineLabels = false,
+  titleBar = {
+    title: undefined,
+    drag: true,
+    filter: true,
+    position: undefined,
+    onDrag: undefined,
+    onDragStart: undefined,
+    onDragEnd: undefined,
+  },
+  hideCopyButton = false,
+  toggled,
+  setToggle,
+}: FluxCoreProps) {
+  // Set active store and panel settings via module-level signals (Pattern
+  // 6). Cleanup resets to the global default on unmount so re-mounts get a
+  // fresh state.
+  effect(() => {
+    setActiveStore(store)
+    setActivePanelSettings({ hideCopyButton })
+  })
 
-    // drag
-    const [rootRef, set] = useTransform<HTMLDivElement>()
+  const paths = useVisiblePaths(store)
+  const filter = signal('')
+  const tree = computed(() => buildTree(paths(), filter()))
 
-    // this generally happens on first render because the store is initialized in useEffect.
-    const shouldShow = neverHide || paths.length > 0
-    const title = typeof titleBar === 'object' ? titleBar.title || undefined : undefined
-    const drag = typeof titleBar === 'object' ? titleBar.drag ?? true : true
-    const filterEnabled = typeof titleBar === 'object' ? titleBar.filter ?? true : true
-    const position = typeof titleBar === 'object' ? titleBar.position || undefined : undefined
-    const onDrag = typeof titleBar === 'object' ? titleBar.onDrag || undefined : undefined
-    const onDragStart = typeof titleBar === 'object' ? titleBar.onDragStart || undefined : undefined
-    const onDragEnd = typeof titleBar === 'object' ? titleBar.onDragEnd || undefined : undefined
+  // Drag transform — useTransform returns [refSignal, setFn].
+  const [rootRef, set] = useTransform<HTMLDivElement>()
 
-    useEffect(() => {
-      set({ x: position?.x, y: position?.y })
-    }, [position, set])
+  const title = typeof titleBar === 'object' ? titleBar.title || undefined : undefined
+  const drag = typeof titleBar === 'object' ? titleBar.drag ?? true : true
+  const filterEnabled = typeof titleBar === 'object' ? titleBar.filter ?? true : true
+  const position = typeof titleBar === 'object' ? titleBar.position || undefined : undefined
+  const onDrag = typeof titleBar === 'object' ? titleBar.onDrag || undefined : undefined
+  const onDragStart = typeof titleBar === 'object' ? titleBar.onDragStart || undefined : undefined
+  const onDragEnd = typeof titleBar === 'object' ? titleBar.onDragEnd || undefined : undefined
 
-    return (
-      <PanelSettingsContext.Provider value={{ hideCopyButton }}>
-          <StyledRoot
-            innerRef={rootRef}
-            fill={fill}
-            flat={flat}
-            glass={glass}
-            oneLineLabels={oneLineLabels}
-            hideTitleBar={!titleBar}
-            style={{ ...rootStyle, display: shouldShow ? 'block' : 'none' }}>
-            {titleBar && (
-              <TitleWithFilter
-                onDrag={(point) => {
-                  set(point)
-                  onDrag?.(point)
-                }}
-                onDragStart={(point) => onDragStart?.(point)}
-                onDragEnd={(point) => onDragEnd?.(point)}
-                setFilter={setFilter}
-                toggle={(flag?: boolean) => setToggle((t: boolean) => flag ?? !t)}
-                toggled={toggled}
-                title={title}
-                drag={drag}
-                filterEnabled={filterEnabled}
-                from={position}
-              />
-            )}
-            {shouldShow && (
-              <StoreContext.Provider value={store}>
-                <TreeWrapper isRoot fill={fill} flat={flat} tree={tree} toggled={toggled} />
-              </StoreContext.Provider>
-            )}
-          </StyledRoot>
-        </PanelSettingsContext.Provider>
-    )
-  }
-)
+  // Apply position whenever the controlled prop changes.
+  effect(() => {
+    set({ x: position?.x, y: position?.y })
+  })
+
+  // shouldShow tracks paths reactively.
+  const shouldShow = computed(() => neverHide || paths().length > 0)
+
+  return (
+    <StyledRoot
+      innerRef={rootRef}
+      fill={fill}
+      flat={flat}
+      glass={glass}
+      oneLineLabels={oneLineLabels}
+      hideTitleBar={!titleBar}
+      style={() => ({ ...rootStyle, display: shouldShow() ? 'block' : 'none' })}>
+      {titleBar && (
+        <TitleWithFilter
+          onDrag={(point) => {
+            set(point)
+            onDrag?.(point)
+          }}
+          onDragStart={(point) => onDragStart?.(point)}
+          onDragEnd={(point) => onDragEnd?.(point)}
+          setFilter={(v: string) => filter.set(v)}
+          toggle={(flag?: boolean) => setToggle((t: boolean) => flag ?? !t)}
+          toggled={toggled}
+          title={title}
+          drag={drag}
+          filterEnabled={filterEnabled}
+          from={position}
+        />
+      )}
+      {() =>
+        shouldShow() && (
+          <TreeWrapper isRoot fill={fill} flat={flat} tree={tree()} toggled={toggled()} />
+        )
+      }
+    </StyledRoot>
+  )
+}

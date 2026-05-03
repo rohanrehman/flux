@@ -1,23 +1,12 @@
-import { Component, h } from 'preact'
-import type { ComponentType } from 'preact'
+// Phaze migration: memo() is a no-op pass-through. Phaze components run
+// once at mount — there's no re-render to skip. Call sites can be deleted
+// over time; keeping the export so the migration doesn't have to touch
+// every consumer at once.
+import type { Component, JSXChild } from '@madenowhere/phaze'
 
-function shallowEqual(a: Record<string, unknown>, b: Record<string, unknown>) {
-  const keys = Object.keys(a)
-  if (keys.length !== Object.keys(b).length) return false
-  return keys.every((k) => a[k] === b[k])
-}
-
-export function memo<P extends object>(
-  Comp: ComponentType<P>,
-  compare: (prev: P, next: P) => boolean = shallowEqual as any
-): ComponentType<P> {
-  class Memo extends Component<P> {
-    shouldComponentUpdate(next: P) {
-      return !compare(this.props, next)
-    }
-    render() {
-      return h(Comp as any, this.props)
-    }
-  }
-  return Memo as unknown as ComponentType<P>
+export function memo<C extends (props: any) => JSXChild | Component<any>>(
+  Comp: C,
+  _compare?: (prev: any, next: any) => boolean
+): C {
+  return Comp
 }

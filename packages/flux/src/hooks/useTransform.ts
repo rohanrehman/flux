@@ -1,19 +1,30 @@
-import { useRef, useCallback } from 'preact/hooks'
-import type { RefObject } from 'preact'
+import { signal } from '@madenowhere/phaze'
+import type { Signal } from '@madenowhere/phaze'
 
+/**
+ * Imperative transform helper for the panel's drag-bar (and similar). Returns
+ * a signal-as-ref and a setter that writes a CSS `translate3d` to the
+ * element when it lands. Phaze migration: the ref is a Signal<T>, not a
+ * preact RefObject; consumers should pass it directly to the element via
+ * `<el ref={ref} />` (phaze auto-wires signal.set on mount).
+ *
+ * The position is held in a plain local — components run once, so the
+ * closure persists for the lifetime of the scope.
+ */
 export function useTransform<T extends HTMLElement>(): [
-  RefObject<T>,
+  Signal<T | undefined>,
   (point: { x?: number; y?: number }) => void
 ] {
-  const nodeRef = useRef<T | null>(null)
-  const local = useRef({ x: 0, y: 0 })
+  const nodeRef = signal<T>()
+  const local = { x: 0, y: 0 }
 
-  const set = useCallback((point: { x?: number; y?: number }) => {
-    Object.assign(local.current, point)
-    if (nodeRef.current) {
-      nodeRef.current.style.transform = `translate3d(${local.current.x}px, ${local.current.y}px, 0)`
+  const set = (point: { x?: number; y?: number }) => {
+    Object.assign(local, point)
+    const el = nodeRef()
+    if (el) {
+      el.style.transform = `translate3d(${local.x}px, ${local.y}px, 0)`
     }
-  }, [])
+  }
 
-  return [nodeRef as RefObject<T>, set]
+  return [nodeRef, set]
 }

@@ -18,8 +18,10 @@ export { useInput } from '../hooks/useInput'
 export { useVisiblePaths } from '../hooks/useVisiblePaths'
 export { useValuesForPath } from '../hooks/useValuesForPath'
 
-// Context providers for custom stores
-export { useStoreContext, FluxStoreProvider } from '../context'
+// Store accessors. Phaze migration drops FluxStoreProvider — use
+// setActiveStore() before mounting your panel root if you need a scoped
+// store. Most apps just use the default `fluxStore` singleton.
+export { useStoreContext, setActiveStore } from '../context'
 
 // Tree utilities for rendering folder hierarchies
 export { buildTree, isInput } from '../components/Flux/tree'

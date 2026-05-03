@@ -1,6 +1,7 @@
+/** @jsxImportSource @madenowhere/phaze */
 import { Plugins } from '../../plugin'
 import { warn, FluxErrors } from '../../utils/log'
-import { InputContext } from '../../context'
+import { setCurrentInput } from '../../context'
 import { useInputSetters } from '../../hooks'
 import { StyledInputWrapper } from '../UI/StyledUI'
 import type { DataInput } from '../../types'
@@ -35,26 +36,32 @@ export function ControlInput({
     return null
   }
 
+  // Phaze migration (Pattern 6): no createContext/Provider in phaze. The
+  // per-row input context is set synchronously via a module-level slot
+  // immediately before rendering the plugin's component. Plugins read it
+  // ONCE at the top of their function via useInputContext(); the captured
+  // value is stable for the lifetime of the row because phaze components
+  // run once at mount. Subsequent rows' setCurrentInput() calls don't
+  // disturb already-captured values.
+  setCurrentInput({
+    key: valueKey,
+    path,
+    id: '' + path,
+    label,
+    displayValue,
+    value,
+    onChange,
+    onUpdate,
+    settings,
+    setValue,
+    disabled,
+    ...rest,
+  } as any)
+
   return (
-    <InputContext.Provider
-      value={{
-        key: valueKey,
-        path,
-        id: '' + path,
-        label,
-        displayValue,
-        value,
-        onChange,
-        onUpdate,
-        settings,
-        setValue,
-        disabled,
-        ...rest,
-      }}>
-      <StyledInputWrapper disabled={disabled}>
-        {/* @ts-ignore */}
-        <Input />
-      </StyledInputWrapper>
-    </InputContext.Provider>
+    <StyledInputWrapper disabled={disabled}>
+      {/* @ts-ignore */}
+      <Input />
+    </StyledInputWrapper>
   )
 }
