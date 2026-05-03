@@ -1,5 +1,6 @@
-import { useRef } from 'preact/hooks'
-import type { JSX, Ref } from 'preact'
+/** @jsxImportSource @madenowhere/phaze */
+import { signal } from '@madenowhere/phaze'
+import type { Signal } from '@madenowhere/phaze'
 import { Label, Row } from '../../components/UI'
 import { Vector } from '../Vector'
 import { Range, RangeWrapper, Scrubber, Indicator, sanitizeStep } from '../Number'
@@ -9,31 +10,36 @@ import { useInputContext } from '../../context'
 import { useTh } from '../../styles'
 import type { IntervalSliderProps, IntervalProps, InternalInterval } from './interval-types'
 
-type ContainerProps = JSX.HTMLAttributes<HTMLDivElement> & { ref?: Ref<HTMLDivElement> }
+type DivProps = JSX.IntrinsicElements['div']
+type RefLike<T> = ((el: T) => void) | { current: T | null } | Signal<T | undefined>
+type ContainerProps = DivProps & { ref?: RefLike<HTMLDivElement> }
+
 function Container({ ref, className = '', ...props }: ContainerProps) {
-  return <div ref={ref} class={`flux-interval-container ${className}`.trim()} {...props} />
+  return <div ref={ref as any} class={`flux-interval-container ${className}`.trim()} {...props} />
 }
 
 function IntervalSlider({ value, bounds: [min, max], onDrag, ...settings }: IntervalSliderProps) {
-  const ref = useRef<HTMLDivElement>(null)
-  const minScrubberRef = useRef<HTMLDivElement>(null)
-  const maxScrubberRef = useRef<HTMLDivElement>(null)
-  const rangeWidth = useRef<number>(0)
+  const ref = signal<HTMLDivElement>()
+  const minScrubberRef = signal<HTMLDivElement>()
+  const maxScrubberRef = signal<HTMLDivElement>()
+  let rangeWidth = 0
   const scrubberWidth = useTh('sizes', 'scrubberWidth')
 
   const bind = useDrag(({ event, first, xy: [x], movement: [mx], memo = {} }) => {
     if (first) {
-      const { width, left } = ref.current!.getBoundingClientRect()
-      rangeWidth.current = width - parseFloat(scrubberWidth)
+      const el = ref()
+      if (!el) return memo
+      const { width, left } = el.getBoundingClientRect()
+      rangeWidth = width - parseFloat(scrubberWidth)
 
-      const targetIsScrub = event?.target === minScrubberRef.current || event?.target === maxScrubberRef.current
+      const targetIsScrub = event?.target === minScrubberRef() || event?.target === maxScrubberRef()
 
       memo.pos = invertedRange((x - left) / width, min, max)
       const delta = Math.abs(memo.pos - value.min) - Math.abs(memo.pos - value.max)
       memo.key = delta < 0 || (delta === 0 && memo.pos <= value.min) ? 'min' : 'max'
       if (targetIsScrub) memo.pos = value[memo.key as keyof InternalInterval]
     }
-    const newValue = memo.pos + invertedRange(mx / rangeWidth.current, 0, max - min)
+    const newValue = memo.pos + invertedRange(mx / rangeWidth, 0, max - min)
 
     onDrag({ [memo.key]: sanitizeStep(newValue, settings[memo.key as 'min' | 'max']) })
     return memo
@@ -56,7 +62,7 @@ function IntervalSlider({ value, bounds: [min, max], onDrag, ...settings }: Inte
 export function IntervalComponent() {
   const { label, displayValue, onUpdate, settings } = useInputContext<IntervalProps>()
 
-  const { bounds, ..._settings } = settings
+  const { bounds: _bounds, ..._settings } = settings
 
   return (
     <>

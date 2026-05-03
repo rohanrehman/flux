@@ -1,7 +1,7 @@
 /**
  * Types exposed through the public API
  */
-import type { ComponentType } from 'preact'
+import type { Component, JSXChild } from '@madenowhere/phaze'
 import type { VectorSettings } from '../plugins/Vector/vector-types'
 import { StoreType, Data, DataInput } from './internal'
 import type { BeautifyUnionType, UnionToIntersection } from './utils'
@@ -60,7 +60,7 @@ export type ButtonGroupOpts = {
 export type ButtonGroupInputOpts =
   | ButtonGroupOpts
   | {
-      label?: string | React.JSX.Element | null
+      label?: string | JSXChild | null
       opts: ButtonGroupOpts
     }
 
@@ -144,7 +144,7 @@ type SchemaItem =
 
 type GenericSchemaItemOptions = {
   render?: RenderFn
-  label?: string | React.JSX.Element
+  label?: string | JSXChild
   hint?: string
   order?: number
 }
@@ -286,7 +286,7 @@ export interface Plugin<Input, Value = Input, InternalSettings = {}> {
   /**
    * The component that shows the input value;
    */
-  component: ComponentType
+  component: Component
   /**
    * Normalizes the input into a { value, settings } object.
    *
@@ -322,7 +322,7 @@ export interface Plugin<Input, Value = Input, InternalSettings = {}> {
 
 export type InputContextProps = {
   id: string
-  label: string | React.JSX.Element
+  label: string | JSXChild
   hint?: string
   path: string
   key: string
@@ -332,7 +332,7 @@ export type InputContextProps = {
   storeId: string
   value: unknown
   displayValue: unknown
-  onChange: React.Dispatch<any>
+  onChange: (value: any) => void
   emitOnEditStart: () => void
   emitOnEditEnd: () => void
   onUpdate: (v: any | ((v: any) => any)) => void
@@ -357,7 +357,7 @@ export interface FluxInputProps<V, InternalSettings = {}, DisplayValue = V> {
   disabled?: boolean
   displayValue: DisplayValue
   value: V
-  onChange: React.Dispatch<any>
+  onChange: (value: any) => void
   emitOnEditStart: () => void
   emitOnEditEnd: () => void
   onUpdate: (v: any | ((v: any) => any)) => void

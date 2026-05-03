@@ -1,3 +1,4 @@
+/** @jsxImportSource @madenowhere/phaze */
 import { useInputContext } from '../../context'
 import { Label, Row } from '../../components/UI'
 import { StyledInputWrapper } from './StyledBoolean'
@@ -15,7 +16,7 @@ export function Boolean({
         id={id}
         type="checkbox"
         checked={value}
-        onChange={(e) => onUpdate(e.currentTarget.checked)}
+        onChange={(e: Event) => onUpdate((e.currentTarget as HTMLInputElement).checked)}
         disabled={disabled}
       />
       <label for={id}>

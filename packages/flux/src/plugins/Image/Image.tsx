@@ -1,4 +1,4 @@
-import { useCallback } from 'preact/hooks'
+/** @jsxImportSource @madenowhere/phaze */
 import { Label, Portal, Overlay, Row } from '../../components/UI'
 import { useDropzone } from './useDropzone'
 import { DropZone, ImageContainer, ImagePreview, Instructions, ImageLargePreview, Remove } from './StyledImage'
@@ -10,20 +10,14 @@ export function ImageComponent() {
   const { label, value, onUpdate, disabled, id } = useInputContext<ImageProps>()
   const { popinRef, wrapperRef, shown, show, hide } = usePopin()
 
-  const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      if (acceptedFiles.length) onUpdate(acceptedFiles[0])
-    },
-    [onUpdate]
-  )
+  const onDrop = (acceptedFiles: File[]) => {
+    if (acceptedFiles.length) onUpdate(acceptedFiles[0])
+  }
 
-  const clear = useCallback(
-    (e: MouseEvent) => {
-      e.stopPropagation()
-      onUpdate(undefined)
-    },
-    [onUpdate]
-  )
+  const clear = (e: MouseEvent) => {
+    e.stopPropagation()
+    onUpdate(undefined)
+  }
 
   const { getRootProps, getInputProps, isDragAccept } = useDropzone({
     maxFiles: 1,
@@ -44,15 +38,17 @@ export function ImageComponent() {
           onPointerUp={hide}
           style={{ backgroundImage: value ? `url(${value})` : 'none' }}
         />
-        {shown && !!value && (
-          <Portal>
-            <Overlay onPointerUp={hide} style={{ cursor: 'pointer' }} />
-            <ImageLargePreview innerRef={wrapperRef} style={{ backgroundImage: `url(${value})` }} />
-          </Portal>
-        )}
-        <DropZone {...(getRootProps({ isDragAccept }) as any)}>
+        {() =>
+          shown() && !!value && (
+            <Portal>
+              <Overlay onPointerUp={hide} style={{ cursor: 'pointer' }} />
+              <ImageLargePreview innerRef={wrapperRef} style={{ backgroundImage: `url(${value})` }} />
+            </Portal>
+          )
+        }
+        <DropZone {...(getRootProps({ isDragAccept: () => isDragAccept() }) as any)}>
           <input {...(getInputProps() as any)} id={id} />
-          <Instructions>{isDragAccept ? 'drop image' : 'click or drop'}</Instructions>
+          <Instructions>{() => (isDragAccept() ? 'drop image' : 'click or drop')}</Instructions>
         </DropZone>
         <Remove onClick={clear} disabled={!value} />
       </ImageContainer>

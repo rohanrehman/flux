@@ -1,3 +1,4 @@
+/** @jsxImportSource @madenowhere/phaze */
 import { Vector } from '../Vector'
 import { Label, Row } from '../../components/UI'
 import { useInputContext } from '../../context'

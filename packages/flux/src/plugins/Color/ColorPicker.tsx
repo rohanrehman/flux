@@ -1,6 +1,7 @@
-import { useRef, useState, useCallback, useEffect } from 'preact/hooks'
+/** @jsxImportSource @madenowhere/phaze */
+import { signal, effect } from '@madenowhere/phaze'
+import type { JSXChild } from '@madenowhere/phaze'
 import { colord } from 'colord'
-import type { ComponentChildren } from 'preact'
 
 export type RgbColor = { r: number; g: number; b: number }
 export type RgbaColor = { r: number; g: number; b: number; a: number }
@@ -25,30 +26,31 @@ function clamp01(v: number) {
   return Math.max(0, Math.min(1, v))
 }
 
+/**
+ * HSVA state mirrored against an external RGBA. Phaze migration: useState
+ * → signal, useRef → mutable cache local (Pattern 5), useEffect → effect.
+ * The effect tracks `color` only when wrapped in a thunk by the caller;
+ * a plain prop is captured once.
+ */
 function useColorState(color: RgbaColor, onChange: (c: RgbaColor) => void) {
-  const [hsva, setHsva] = useState<HsvaColor>(() => toHsva(color))
-  const cache = useRef({ color, hsva: toHsva(color) })
+  const hsva = signal<HsvaColor>(toHsva(color))
+  let cache = { color, hsva: toHsva(color) }
 
-  useEffect(() => {
-    if (!equalRgba(color, cache.current.color)) {
+  effect(() => {
+    if (!equalRgba(color, cache.color)) {
       const next = toHsva(color)
-      cache.current = { color, hsva: next }
-      setHsva(next)
+      cache = { color, hsva: next }
+      hsva.set(next)
     }
-  }, [color])
+  })
 
-  const update = useCallback(
-    (partial: Partial<HsvaColor>) => {
-      setHsva((prev) => {
-        const next = { ...prev, ...partial }
-        const rgba = fromHsva(next)
-        cache.current = { color: rgba, hsva: next }
-        onChange(rgba)
-        return next
-      })
-    },
-    [onChange]
-  )
+  const update = (partial: Partial<HsvaColor>) => {
+    const next = { ...hsva(), ...partial }
+    const rgba = fromHsva(next)
+    cache = { color: rgba, hsva: next }
+    onChange(rgba)
+    hsva.set(next)
+  }
 
   return [hsva, update] as const
 }
@@ -58,44 +60,35 @@ function Interactive({
   children,
 }: {
   onMove: (x: number, y: number) => void
-  children?: ComponentChildren
+  children?: JSXChild
 }) {
-  const ref = useRef<HTMLDivElement | null>(null)
-  const dragging = useRef(false)
+  const ref = signal<HTMLDivElement>()
+  let dragging = false
 
-  const getPos = useCallback(
-    (e: PointerEvent) => {
-      const el = ref.current
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      onMove(clamp01((e.clientX - rect.left) / rect.width), clamp01((e.clientY - rect.top) / rect.height))
-    },
-    [onMove]
-  )
+  const getPos = (e: PointerEvent) => {
+    const el = ref()
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    onMove(clamp01((e.clientX - rect.left) / rect.width), clamp01((e.clientY - rect.top) / rect.height))
+  }
 
-  const onPointerDown = useCallback(
-    (e: PointerEvent) => {
-      dragging.current = true
-      ;(e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId)
-      getPos(e)
-    },
-    [getPos]
-  )
+  const onPointerDown = (e: PointerEvent) => {
+    dragging = true
+    ;(e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId)
+    getPos(e)
+  }
 
-  const onPointerMove = useCallback(
-    (e: PointerEvent) => {
-      if (dragging.current) getPos(e)
-    },
-    [getPos]
-  )
+  const onPointerMove = (e: PointerEvent) => {
+    if (dragging) getPos(e)
+  }
 
-  const onPointerUp = useCallback(() => {
-    dragging.current = false
-  }, [])
+  const onPointerUp = () => {
+    dragging = false
+  }
 
   return (
     <div
-      ref={ref}
+      ref={ref as any}
       class="react-colorful__interactive"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -105,22 +98,28 @@ function Interactive({
   )
 }
 
-function Pointer({ left, top, color }: { left: number; top: number; color: string }) {
+function Pointer({ left, top, color }: { left: () => number; top: () => number; color: () => string }) {
   return (
-    <div class="react-colorful__pointer" style={{ top: `${top * 100}%`, left: `${left * 100}%` }}>
-      <div class="react-colorful__pointer-fill" style={{ backgroundColor: color }} />
+    <div class="react-colorful__pointer" style={() => ({ top: `${top() * 100}%`, left: `${left() * 100}%` })}>
+      <div class="react-colorful__pointer-fill" style={() => ({ backgroundColor: color() })} />
     </div>
   )
 }
 
-function Saturation({ hsva, onChange }: { hsva: HsvaColor; onChange: (v: Partial<HsvaColor>) => void }) {
-  const onMove = useCallback((x: number, y: number) => onChange({ s: x, v: 1 - y }), [onChange])
-  const bgColor = colord({ h: hsva.h, s: 100, v: 100 }).toHslString()
-  const pointerColor = colord({ h: hsva.h, s: hsva.s * 100, v: hsva.v * 100 }).toHslString()
+function Saturation({
+  hsva,
+  onChange,
+}: {
+  hsva: () => HsvaColor
+  onChange: (v: Partial<HsvaColor>) => void
+}) {
+  const onMove = (x: number, y: number) => onChange({ s: x, v: 1 - y })
+  const bgColor = () => colord({ h: hsva().h, s: 100, v: 100 }).toHslString()
+  const pointerColor = () => colord({ h: hsva().h, s: hsva().s * 100, v: hsva().v * 100 }).toHslString()
   return (
-    <div class="react-colorful__saturation" style={{ backgroundColor: bgColor }}>
+    <div class="react-colorful__saturation" style={() => ({ backgroundColor: bgColor() })}>
       <Interactive onMove={onMove}>
-        <Pointer left={hsva.s} top={1 - hsva.v} color={pointerColor} />
+        <Pointer left={() => hsva().s} top={() => 1 - hsva().v} color={pointerColor} />
       </Interactive>
     </div>
   )
@@ -131,16 +130,16 @@ function Hue({
   onChange,
   className,
 }: {
-  hue: number
+  hue: () => number
   onChange: (v: Partial<HsvaColor>) => void
   className?: string
 }) {
-  const onMove = useCallback((x: number) => onChange({ h: x * 360 }), [onChange])
-  const pointerColor = colord({ h: hue, s: 100, v: 100 }).toHslString()
+  const onMove = (x: number) => onChange({ h: x * 360 })
+  const pointerColor = () => colord({ h: hue(), s: 100, v: 100 }).toHslString()
   return (
     <div class={`react-colorful__hue${className ? ` ${className}` : ''}`}>
       <Interactive onMove={(x) => onMove(x)}>
-        <Pointer left={hue / 360} top={0.5} color={pointerColor} />
+        <Pointer left={() => hue() / 360} top={() => 0.5} color={pointerColor} />
       </Interactive>
     </div>
   )
@@ -151,19 +150,24 @@ function Alpha({
   onChange,
   className,
 }: {
-  hsva: HsvaColor
+  hsva: () => HsvaColor
   onChange: (v: Partial<HsvaColor>) => void
   className?: string
 }) {
-  const onMove = useCallback((x: number) => onChange({ a: x }), [onChange])
-  const { r, g, b } = colord({ h: hsva.h, s: hsva.s * 100, v: hsva.v * 100 }).toRgb()
-  const gradient = `linear-gradient(to right, rgba(${r},${g},${b},0), rgba(${r},${g},${b},1))`
-  const pointerColor = `rgba(${r},${g},${b},${hsva.a})`
+  const onMove = (x: number) => onChange({ a: x })
+  const gradient = () => {
+    const { r, g, b } = colord({ h: hsva().h, s: hsva().s * 100, v: hsva().v * 100 }).toRgb()
+    return `linear-gradient(to right, rgba(${r},${g},${b},0), rgba(${r},${g},${b},1))`
+  }
+  const pointerColor = () => {
+    const { r, g, b } = colord({ h: hsva().h, s: hsva().s * 100, v: hsva().v * 100 }).toRgb()
+    return `rgba(${r},${g},${b},${hsva().a})`
+  }
   return (
     <div class={`react-colorful__alpha${className ? ` ${className}` : ''}`}>
-      <div class="react-colorful__alpha-gradient" style={{ background: gradient }} />
+      <div class="react-colorful__alpha-gradient" style={() => ({ background: gradient() })} />
       <Interactive onMove={(x) => onMove(x)}>
-        <Pointer left={hsva.a} top={0.5} color={pointerColor} />
+        <Pointer left={() => hsva().a} top={() => 0.5} color={pointerColor} />
       </Interactive>
     </div>
   )
@@ -175,7 +179,7 @@ export function RgbColorPicker({ color, onChange }: { color: RgbColor; onChange:
   return (
     <div class="react-colorful">
       <Saturation hsva={hsva} onChange={update} />
-      <Hue hue={hsva.h} onChange={update} className="react-colorful__last-control" />
+      <Hue hue={() => hsva().h} onChange={update} className="react-colorful__last-control" />
     </div>
   )
 }
@@ -185,7 +189,7 @@ export function RgbaColorPicker({ color, onChange }: { color: RgbaColor; onChang
   return (
     <div class="react-colorful">
       <Saturation hsva={hsva} onChange={update} />
-      <Hue hue={hsva.h} onChange={update} />
+      <Hue hue={() => hsva().h} onChange={update} />
       <Alpha hsva={hsva} onChange={update} className="react-colorful__last-control" />
     </div>
   )

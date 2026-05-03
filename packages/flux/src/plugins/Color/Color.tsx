@@ -1,6 +1,6 @@
-import { useRef, useEffect } from 'preact/hooks'
+/** @jsxImportSource @madenowhere/phaze */
+import { effect, cleanup } from '@madenowhere/phaze'
 import { RgbaColorPicker, RgbColorPicker } from './ColorPicker'
-import type { RgbaColor } from './ColorPicker'
 import { colord } from 'colord'
 import { PickerWrapper, ColorPreview, PickerContainer } from './StyledColor'
 import { ValueInput } from '../../components/ValueInput'
@@ -25,8 +25,8 @@ export function Color({
 
   const { popinRef, wrapperRef, shown, show, hide } = usePopin()
 
-  // timeout before colorpicker close
-  const timer = useRef(0)
+  // Pending close timer — plain mutable local (Pattern 5).
+  let timer = 0
 
   const ColorPicker = hasAlpha ? RgbaColorPicker : RgbColorPicker
 
@@ -38,31 +38,33 @@ export function Color({
   const hidePicker = () => {
     hide()
     emitOnEditEnd()
-    window.clearTimeout(timer.current)
+    window.clearTimeout(timer)
   }
 
   const hideAfterDelay = () => {
-    timer.current = window.setTimeout(hidePicker, 500)
+    timer = window.setTimeout(hidePicker, 500)
   }
 
-  useEffect(() => {
-    return () => window.clearTimeout(timer.current)
-  }, [])
+  effect(() => {
+    cleanup(() => window.clearTimeout(timer))
+  })
 
   return (
     <>
-      <ColorPreview innerRef={popinRef} active={shown} onClick={() => showPicker()} style={{ color: displayValue }} />
-      {shown && (
-        <Portal>
-          <Overlay onPointerUp={hidePicker} />
-          <PickerWrapper
-            innerRef={wrapperRef}
-            onMouseEnter={() => window.clearTimeout(timer.current)}
-            onMouseLeave={(e: MouseEvent) => (e as MouseEvent & { buttons: number }).buttons === 0 && hideAfterDelay()}>
-            <ColorPicker color={convertToRgb(value, format)} onChange={onUpdate} />
-          </PickerWrapper>
-        </Portal>
-      )}
+      <ColorPreview innerRef={popinRef} active={() => shown()} onClick={() => showPicker()} style={{ color: displayValue as string }} />
+      {() =>
+        shown() && (
+          <Portal>
+            <Overlay onPointerUp={hidePicker} />
+            <PickerWrapper
+              innerRef={wrapperRef}
+              onMouseEnter={() => window.clearTimeout(timer)}
+              onMouseLeave={(e: MouseEvent) => (e as MouseEvent & { buttons: number }).buttons === 0 && hideAfterDelay()}>
+              <ColorPicker color={convertToRgb(value, format)} onChange={onUpdate} />
+            </PickerWrapper>
+          </Portal>
+        )
+      }
     </>
   )
 }
@@ -75,7 +77,7 @@ export function ColorComponent() {
       <Label>{label}</Label>
       <PickerContainer>
         <Color value={value} displayValue={displayValue} onChange={onChange} onUpdate={onUpdate} settings={settings} />
-        <ValueInput value={displayValue} onChange={onChange} onUpdate={onUpdate} />
+        <ValueInput value={displayValue as string} onChange={onChange} onUpdate={onUpdate} />
       </PickerContainer>
     </Row>
   )

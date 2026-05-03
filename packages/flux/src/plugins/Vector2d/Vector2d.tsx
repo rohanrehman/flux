@@ -1,15 +1,19 @@
-import type { JSX, Ref } from 'preact'
+/** @jsxImportSource @madenowhere/phaze */
+import type { Signal } from '@madenowhere/phaze'
 import { Vector } from '../Vector'
 import { Label, Row } from '../../components/UI'
 import { Joystick } from './Joystick'
 import { useInputContext } from '../../context'
 import type { Vector2dProps } from './vector2d-types'
 
-type ContainerProps = JSX.HTMLAttributes<HTMLDivElement> & { withJoystick?: boolean; ref?: Ref<HTMLDivElement> }
+type DivProps = JSX.IntrinsicElements['div']
+type RefLike<T> = ((el: T) => void) | { current: T | null } | Signal<T | undefined>
+type ContainerProps = DivProps & { withJoystick?: boolean; ref?: RefLike<HTMLDivElement> }
+
 function Container({ withJoystick, ref, className = '', ...props }: ContainerProps) {
   return (
     <div
-      ref={ref}
+      ref={ref as any}
       class={[
         'flux-vector2d-container',
         withJoystick ? 'flux-vector2d-container--with-joystick' : '',

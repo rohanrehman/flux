@@ -1,5 +1,6 @@
-import { useState } from 'preact/hooks'
-import { memo } from '../../utils/memo'
+/** @jsxImportSource @madenowhere/phaze */
+import { signal } from '@madenowhere/phaze'
+import type { JSXChild } from '@madenowhere/phaze'
 import { NumberInput } from '../../components/ValueInput'
 import { Label, Row } from '../../components/UI'
 import { useDrag } from '../../hooks'
@@ -9,7 +10,6 @@ import { useInputContext } from '../../context'
 import type { NumberProps } from './number-types'
 import { multiplyStep } from '../../utils'
 import { InnerNumberLabel } from '../../components/ValueInput/StyledInput'
-import type { ComponentChildren } from 'preact'
 
 type DraggableLabelProps = {
   label: string
@@ -18,10 +18,10 @@ type DraggableLabelProps = {
   onUpdate: (v: any) => void
 }
 
-const DraggableLabel = memo(({ label, onUpdate, step, innerLabelTrim }: DraggableLabelProps) => {
-  const [dragging, setDragging] = useState(false)
+function DraggableLabel({ label, onUpdate, step, innerLabelTrim }: DraggableLabelProps) {
+  const dragging = signal(false)
   const bind = useDrag(({ active, delta: [dx], event, memo = 0 }) => {
-    setDragging(active)
+    dragging.set(active)
     memo += dx / 2
     if (Math.abs(memo) >= 1) {
       onUpdate((v: any) => parseFloat(v) + Math.floor(memo) * step * multiplyStep(event))
@@ -31,11 +31,11 @@ const DraggableLabel = memo(({ label, onUpdate, step, innerLabelTrim }: Draggabl
   })
 
   return (
-    <InnerNumberLabel dragging={dragging} title={label.length > 1 ? label : ''} {...bind()}>
+    <InnerNumberLabel dragging={() => dragging()} title={label.length > 1 ? label : ''} {...bind()}>
       {label.slice(0, innerLabelTrim)}
     </InnerNumberLabel>
   )
-})
+}
 
 export function Number({
   label,
@@ -50,7 +50,7 @@ export function Number({
   label: string
   innerLabelTrim?: number
 }) {
-  const InnerLabel: ComponentChildren = innerLabelTrim > 0 && (
+  const InnerLabel: JSXChild = innerLabelTrim > 0 && (
     <DraggableLabel label={label} step={settings.step} onUpdate={onUpdate} innerLabelTrim={innerLabelTrim} />
   )
   return (

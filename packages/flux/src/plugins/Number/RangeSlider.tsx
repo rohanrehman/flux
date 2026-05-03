@@ -1,4 +1,5 @@
-import { useRef } from 'preact/hooks'
+/** @jsxImportSource @madenowhere/phaze */
+import { signal } from '@madenowhere/phaze'
 import { RangeWrapper, Range, Scrubber, Indicator } from './StyledRange'
 import { sanitizeStep } from './number-plugin'
 import { useDrag } from '../../hooks'
@@ -7,22 +8,24 @@ import { useTh } from '../../styles'
 import type { RangeSliderProps } from './number-types'
 
 export function RangeSlider({ value, min, max, onDrag, step, initialValue }: RangeSliderProps) {
-  const ref = useRef<HTMLDivElement>(null)
-  const scrubberRef = useRef<HTMLDivElement>(null)
-  const rangeWidth = useRef<number>(0)
+  const ref = signal<HTMLDivElement>()
+  const scrubberRef = signal<HTMLDivElement>()
+  let rangeWidth = 0
   const scrubberWidth = useTh('sizes', 'scrubberWidth')
 
   const bind = useDrag(({ event, first, xy: [x], movement: [mx], memo }) => {
     if (first) {
       // rangeWidth is the width of the slider el minus the width of the scrubber el itself
-      const { width, left } = ref.current!.getBoundingClientRect()
-      rangeWidth.current = width - parseFloat(scrubberWidth)
+      const el = ref()
+      if (!el) return memo
+      const { width, left } = el.getBoundingClientRect()
+      rangeWidth = width - parseFloat(scrubberWidth)
 
-      const targetIsScrub = event?.target === scrubberRef.current
-      // memo is the value where the user clicked on
+      const targetIsScrub = event?.target === scrubberRef()
+      // memo is the value where the user clicked
       memo = targetIsScrub ? value : invertedRange((x - left) / width, min, max)
     }
-    const newValue = memo + invertedRange(mx / rangeWidth.current, 0, max - min)
+    const newValue = memo + invertedRange(mx / rangeWidth, 0, max - min)
     onDrag(sanitizeStep(newValue, { step, initialValue }))
     return memo
   })

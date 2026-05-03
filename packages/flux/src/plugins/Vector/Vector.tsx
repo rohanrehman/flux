@@ -1,10 +1,14 @@
-import { useRef, useCallback } from 'preact/hooks'
-import type { JSX, Ref } from 'preact'
+/** @jsxImportSource @madenowhere/phaze */
+import type { Signal } from '@madenowhere/phaze'
 import { useInputContext } from '../../context'
 import { useInputSetters } from '../../hooks'
 import { sanitizeValue } from '../../utils'
 import { Number } from '../Number'
 import type { CoordinateProps, VectorProps } from './vector-types'
+
+type DivProps = JSX.IntrinsicElements['div']
+type SvgProps = JSX.IntrinsicElements['svg']
+type RefLike<T> = ((el: T) => void) | { current: T | null } | Signal<T | undefined>
 
 function Coordinate<T extends Record<string, number>>({
   value,
@@ -14,17 +18,16 @@ function Coordinate<T extends Record<string, number>>({
   onUpdate,
   innerLabelTrim,
 }: CoordinateProps<T>) {
-  // TODO make this better
+  // Phaze migration: useRef → plain mutable local. Components run once,
+  // so closure over `value[valueKey]` would freeze; we read fresh on each
+  // setValue invocation (which is fired from event handlers, not from
+  // the render path).
+  let currentValue = value[valueKey]
+  currentValue = value[valueKey]
 
-  const valueRef = useRef(value[valueKey])
-  valueRef.current = value[valueKey]
-
-  const setValue = useCallback(
-    (newValue: any) =>
-      // @ts-expect-error
-      onUpdate({ [valueKey]: sanitizeValue({ type: 'NUMBER', value: valueRef.current, settings }, newValue) }),
-    [onUpdate, settings, valueKey]
-  )
+  const setValue = (newValue: any) =>
+    // @ts-expect-error
+    onUpdate({ [valueKey]: sanitizeValue({ type: 'NUMBER', value: currentValue, settings }, newValue) })
 
   const number = useInputSetters({ type: 'NUMBER', value: value[valueKey], settings, setValue })
 
@@ -33,7 +36,7 @@ function Coordinate<T extends Record<string, number>>({
       id={id}
       label={valueKey as string}
       value={value[valueKey]}
-      displayValue={number.displayValue}
+      displayValue={number.displayValue() as any}
       onUpdate={number.onUpdate}
       onChange={number.onChange}
       settings={settings}
@@ -42,11 +45,12 @@ function Coordinate<T extends Record<string, number>>({
   )
 }
 
-type ContainerProps = JSX.HTMLAttributes<HTMLDivElement> & { withLock?: boolean; ref?: Ref<HTMLDivElement> }
+type ContainerProps = DivProps & { withLock?: boolean; ref?: RefLike<HTMLDivElement> }
+
 export function Container({ withLock, ref, className = '', ...props }: ContainerProps) {
   return (
     <div
-      ref={ref}
+      ref={ref as any}
       class={[
         'flux-vector-container',
         withLock ? 'flux-vector-container--with-lock' : '',
@@ -61,7 +65,7 @@ export function Container({ withLock, ref, className = '', ...props }: Container
 
 // TODO increase click area
 
-function Lock({ locked, ...props }: JSX.SVGAttributes<SVGSVGElement> & { locked: boolean }) {
+function Lock({ locked, ...props }: SvgProps & { locked: boolean }) {
   return (
     <svg width="10" height="10" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
       {locked ? (

@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'preact/hooks'
+/** @jsxImportSource @madenowhere/phaze */
+import { signal, effect, cleanup } from '@madenowhere/phaze'
 import { useDrag } from '../../hooks'
 import { clamp, multiplyStep } from '../../utils'
 import { JoystickTrigger, JoystickPlayground } from './StyledJoystick'
@@ -11,26 +12,31 @@ import type { Vector2dProps } from './vector2d-types'
 type JoystickProps = { value: Vector2d } & Pick<Vector2dProps, 'onUpdate' | 'settings'>
 
 export function Joystick({ value, settings, onUpdate }: JoystickProps) {
-  const timeout = useRef<number | undefined>()
-  const outOfBoundsX = useRef(0)
-  const outOfBoundsY = useRef(0)
-  const stepMultiplier = useRef(1)
+  // Mutable state — phaze components run once so plain locals persist
+  // for the row's lifetime (Pattern 5).
+  let timeout: number | undefined
+  let outOfBoundsX = 0
+  let outOfBoundsY = 0
+  let stepMultiplier = 1
 
-  const [joystickShown, setShowJoystick] = useState(false)
-  const [isOutOfBounds, setIsOutOfBounds] = useState(false)
+  const joystickShown = signal(false)
+  const isOutOfBounds = signal(false)
 
   const [spanRef, set] = useTransform<HTMLSpanElement>()
 
-  const joystickeRef = useRef<HTMLDivElement>(null)
-  const playgroundRef = useRef<HTMLDivElement>(null)
+  const joystickRef = signal<HTMLDivElement>()
+  const playgroundRef = signal<HTMLDivElement>()
 
-  useLayoutEffect(() => {
-    if (joystickShown) {
-      const { top, left, width, height } = joystickeRef.current!.getBoundingClientRect()
-      playgroundRef.current!.style.left = left + width / 2 + 'px'
-      playgroundRef.current!.style.top = top + height / 2 + 'px'
-    }
-  }, [joystickShown])
+  // Position the floating playground centered on the trigger when shown.
+  effect(() => {
+    if (!joystickShown()) return
+    const j = joystickRef()
+    const p = playgroundRef()
+    if (!j || !p) return
+    const { top, left, width, height } = j.getBoundingClientRect()
+    p.style.left = left + width / 2 + 'px'
+    p.style.top = top + height / 2 + 'px'
+  })
 
   const {
     keys: [v1, v2],
@@ -46,15 +52,15 @@ export function Joystick({ value, settings, onUpdate }: JoystickProps) {
   const w = (parseFloat(wpx) * 0.8) / 2
   const h = (parseFloat(hpx) * 0.8) / 2
 
-  const startOutOfBounds = useCallback(() => {
-    if (timeout.current) return
-    setIsOutOfBounds(true)
-    if (outOfBoundsX.current) set({ x: outOfBoundsX.current * w })
-    if (outOfBoundsY.current) set({ y: outOfBoundsY.current * -h })
-    timeout.current = window.setInterval(() => {
+  const startOutOfBounds = () => {
+    if (timeout) return
+    isOutOfBounds.set(true)
+    if (outOfBoundsX) set({ x: outOfBoundsX * w })
+    if (outOfBoundsY) set({ y: outOfBoundsY * -h })
+    timeout = window.setInterval(() => {
       onUpdate((v: Vector2d) => {
-        const incX = stepV1 * outOfBoundsX.current * stepMultiplier.current
-        const incY = yFactor * stepV2 * outOfBoundsY.current * stepMultiplier.current
+        const incX = stepV1 * outOfBoundsX * stepMultiplier
+        const incY = yFactor * stepV2 * outOfBoundsY * stepMultiplier
         return Array.isArray(v)
           ? {
               [v1]: v[0] + incX,
@@ -66,35 +72,38 @@ export function Joystick({ value, settings, onUpdate }: JoystickProps) {
             }
       })
     }, 16)
-  }, [w, h, onUpdate, set, stepV1, stepV2, v1, v2, yFactor])
+  }
 
-  const endOutOfBounds = useCallback(() => {
-    window.clearTimeout(timeout.current)
-    timeout.current = undefined
-    setIsOutOfBounds(false)
-  }, [])
+  const endOutOfBounds = () => {
+    if (timeout !== undefined) {
+      window.clearTimeout(timeout)
+      timeout = undefined
+    }
+    isOutOfBounds.set(false)
+  }
 
-  useEffect(() => {
+  // Track step modifier keys for the lifetime of the row.
+  effect(() => {
     function setStepMultiplier(event: KeyboardEvent) {
-      stepMultiplier.current = multiplyStep(event)
+      stepMultiplier = multiplyStep(event)
     }
     window.addEventListener('keydown', setStepMultiplier)
     window.addEventListener('keyup', setStepMultiplier)
-    return () => {
-      window.clearTimeout(timeout.current)
+    cleanup(() => {
+      if (timeout !== undefined) window.clearTimeout(timeout)
       window.removeEventListener('keydown', setStepMultiplier)
       window.removeEventListener('keyup', setStepMultiplier)
-    }
-  }, [])
+    })
+  })
 
   const bind = useDrag(({ first, active, delta: [dx, dy], movement: [mx, my] }) => {
-    if (first) setShowJoystick(true)
+    if (first) joystickShown.set(true)
 
     const _x = clamp(mx, -w, w)
     const _y = clamp(my, -h, h)
 
-    outOfBoundsX.current = Math.abs(mx) > Math.abs(_x) ? Math.sign(mx - _x) : 0
-    outOfBoundsY.current = Math.abs(my) > Math.abs(_y) ? Math.sign(_y - my) : 0
+    outOfBoundsX = Math.abs(mx) > Math.abs(_x) ? Math.sign(mx - _x) : 0
+    outOfBoundsY = Math.abs(my) > Math.abs(_y) ? Math.sign(_y - my) : 0
 
     // @ts-expect-error
     let newX = value[v1]
@@ -102,37 +111,39 @@ export function Joystick({ value, settings, onUpdate }: JoystickProps) {
     let newY = value[v2]
 
     if (active) {
-      if (!outOfBoundsX.current) {
-        newX += dx * stepV1 * stepMultiplier.current
+      if (!outOfBoundsX) {
+        newX += dx * stepV1 * stepMultiplier
         set({ x: _x })
       }
-      if (!outOfBoundsY.current) {
-        newY -= yFactor * dy * stepV2 * stepMultiplier.current
+      if (!outOfBoundsY) {
+        newY -= yFactor * dy * stepV2 * stepMultiplier
         set({ y: _y })
       }
-      if (outOfBoundsX.current || outOfBoundsY.current) startOutOfBounds()
+      if (outOfBoundsX || outOfBoundsY) startOutOfBounds()
       else endOutOfBounds()
 
       onUpdate({ [v1]: newX, [v2]: newY })
     } else {
-      setShowJoystick(false)
-      outOfBoundsX.current = 0
-      outOfBoundsY.current = 0
+      joystickShown.set(false)
+      outOfBoundsX = 0
+      outOfBoundsY = 0
       set({ x: 0, y: 0 })
       endOutOfBounds()
     }
   })
 
   return (
-    <JoystickTrigger innerRef={joystickeRef} {...bind()}>
-      {joystickShown && (
-        <Portal>
-          <JoystickPlayground innerRef={playgroundRef} isOutOfBounds={isOutOfBounds}>
-            <div />
-            <span ref={spanRef} />
-          </JoystickPlayground>
-        </Portal>
-      )}
+    <JoystickTrigger innerRef={joystickRef} {...bind()}>
+      {() =>
+        joystickShown() && (
+          <Portal>
+            <JoystickPlayground innerRef={playgroundRef} isOutOfBounds={isOutOfBounds()}>
+              <div />
+              <span ref={spanRef as any} />
+            </JoystickPlayground>
+          </Portal>
+        )
+      }
     </JoystickTrigger>
   )
 }

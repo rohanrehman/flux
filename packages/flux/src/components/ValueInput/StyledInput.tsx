@@ -32,11 +32,14 @@ export function InnerNumberLabel({
   dragging,
   className = '',
   ...props
-}: DivProps & { innerRef?: RefLike<HTMLDivElement>; dragging?: boolean }) {
+}: DivProps & { innerRef?: RefLike<HTMLDivElement>; dragging?: boolean | (() => boolean) }) {
+  // class as thunk so the --dragging modifier flips reactively when callers
+  // pass a Signal/Computed. Phaze unwraps the function on each read.
+  const isDragging = () => (typeof dragging === 'function' ? dragging() : dragging)
   return (
     <div
       ref={innerRef as any}
-      class={`flux-inner-label flux-inner-number-label${dragging ? ' flux-inner-number-label--dragging' : ''} ${className}`.trim()}
+      class={() => `flux-inner-label flux-inner-number-label${isDragging() ? ' flux-inner-number-label--dragging' : ''} ${className}`.trim()}
       {...props}
     />
   )

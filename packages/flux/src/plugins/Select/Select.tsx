@@ -1,5 +1,4 @@
-import { useRef } from 'preact/hooks'
-import type { JSX } from 'preact'
+/** @jsxImportSource @madenowhere/phaze */
 import { useInputContext } from '../../context'
 import { Label, Row, Chevron } from '../../components/UI'
 import { NativeSelect, PresentationalSelect, SelectContainer } from './StyledSelect'
@@ -14,12 +13,14 @@ export function Select({
   disabled,
 }: Pick<SelectProps, 'value' | 'displayValue' | 'onUpdate' | 'id' | 'settings' | 'disabled'>) {
   const { keys, values } = settings
-  const lastDisplayedValue = useRef<any>()
+  // Plain mutable local — phaze components run once so this persists for
+  // the row's lifetime (Pattern 5).
+  let lastDisplayedValue: any
 
   // in case the value isn't present in values (possibly when changing options
   // via deps), remember the last correct display value.
   if (value === values[displayValue]) {
-    lastDisplayedValue.current = keys[displayValue]
+    lastDisplayedValue = keys[displayValue]
   }
 
   return (
@@ -27,7 +28,7 @@ export function Select({
       <NativeSelect
         id={id}
         value={displayValue}
-        onChange={(e: JSX.TargetedEvent<HTMLSelectElement, Event>) =>
+        onChange={(e: Event) =>
           onUpdate(values[Number((e.currentTarget as HTMLSelectElement).value)])
         }
         disabled={disabled}>
@@ -37,7 +38,7 @@ export function Select({
           </option>
         ))}
       </NativeSelect>
-      <PresentationalSelect>{lastDisplayedValue.current}</PresentationalSelect>
+      <PresentationalSelect>{lastDisplayedValue}</PresentationalSelect>
       <Chevron toggled />
     </SelectContainer>
   )
