@@ -1,7 +1,9 @@
-import type { JSX, Ref } from 'preact'
+/** @jsxImportSource @madenowhere/phaze */
+import type { Signal } from '@madenowhere/phaze'
 
-type DivProps = JSX.HTMLAttributes<HTMLDivElement>
-type InputProps = Omit<JSX.IntrinsicElements['input'], 'ref'>
+type DivProps = JSX.IntrinsicElements['div']
+type InputProps = JSX.IntrinsicElements['input']
+type RefLike<T> = ((el: T) => void) | { current: T | null } | Signal<T | undefined>
 
 export function StyledInput({
   innerRef,
@@ -9,7 +11,7 @@ export function StyledInput({
   as: _as,
   className = '',
   ...props
-}: InputProps & { innerRef?: Ref<HTMLInputElement>; fluxType?: string; as?: string }) {
+}: InputProps & { innerRef?: RefLike<HTMLInputElement>; fluxType?: string; as?: string }) {
   const classes = [
     'flux-input',
     fluxType === 'number' ? 'flux-input--number' : '',
@@ -18,11 +20,11 @@ export function StyledInput({
   ]
     .filter(Boolean)
     .join(' ')
-  return <input ref={innerRef} class={classes} {...props} />
+  return <input ref={innerRef as any} class={classes} {...props} />
 }
 
-export function InnerLabel({ innerRef, className = '', ...props }: DivProps & { innerRef?: Ref<HTMLDivElement> }) {
-  return <div ref={innerRef} class={`flux-inner-label ${className}`.trim()} {...props} />
+export function InnerLabel({ innerRef, className = '', ...props }: DivProps & { innerRef?: RefLike<HTMLDivElement> }) {
+  return <div ref={innerRef as any} class={`flux-inner-label ${className}`.trim()} {...props} />
 }
 
 export function InnerNumberLabel({
@@ -30,10 +32,10 @@ export function InnerNumberLabel({
   dragging,
   className = '',
   ...props
-}: DivProps & { innerRef?: Ref<HTMLDivElement>; dragging?: boolean }) {
+}: DivProps & { innerRef?: RefLike<HTMLDivElement>; dragging?: boolean }) {
   return (
     <div
-      ref={innerRef}
+      ref={innerRef as any}
       class={`flux-inner-label flux-inner-number-label${dragging ? ' flux-inner-number-label--dragging' : ''} ${className}`.trim()}
       {...props}
     />
@@ -45,10 +47,10 @@ export function InputContainer({
   textArea,
   className = '',
   ...props
-}: DivProps & { innerRef?: Ref<HTMLDivElement>; textArea?: boolean }) {
+}: DivProps & { innerRef?: RefLike<HTMLDivElement>; textArea?: boolean }) {
   return (
     <div
-      ref={innerRef}
+      ref={innerRef as any}
       class={`flux-input-container${textArea ? ' flux-input-container--textarea' : ''} ${className}`.trim()}
       {...props}
     />

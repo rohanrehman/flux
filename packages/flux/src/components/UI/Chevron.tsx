@@ -1,6 +1,8 @@
-import type { JSX } from 'preact'
+/** @jsxImportSource @madenowhere/phaze */
 
-export function Chevron({ toggled, className = '', ...props }: JSX.SVGAttributes<SVGSVGElement> & { toggled?: boolean }) {
+type SvgProps = JSX.IntrinsicElements['svg']
+
+export function Chevron({ toggled, className = '', ...props }: SvgProps & { toggled?: boolean; className?: string }) {
   return (
     <svg
       width="9"

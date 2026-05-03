@@ -1,9 +1,11 @@
-import type { JSX, Ref } from 'preact'
+/** @jsxImportSource @madenowhere/phaze */
+import type { Signal } from '@madenowhere/phaze'
 
-type DivProps = JSX.HTMLAttributes<HTMLDivElement>
+type DivProps = JSX.IntrinsicElements['div']
+type RefLike<T> = ((el: T) => void) | { current: T | null } | Signal<T | undefined>
 
-export function StyledFolder({ innerRef, className = '', ...props }: DivProps & { innerRef?: Ref<HTMLDivElement> }) {
-  return <div ref={innerRef} class={`flux-folder ${className}`.trim()} {...props} />
+export function StyledFolder({ innerRef, className = '', ...props }: DivProps & { innerRef?: RefLike<HTMLDivElement> }) {
+  return <div ref={innerRef as any} class={`flux-folder ${className}`.trim()} {...props} />
 }
 
 export function StyledWrapper({
@@ -12,7 +14,7 @@ export function StyledWrapper({
   flat = false,
   className = '',
   ...props
-}: DivProps & { innerRef?: Ref<HTMLDivElement>; isRoot?: boolean; fill?: boolean; flat?: boolean }) {
+}: DivProps & { innerRef?: RefLike<HTMLDivElement>; isRoot?: boolean; fill?: boolean; flat?: boolean }) {
   const classes = [
     'flux-folder-wrapper',
     isRoot ? 'flux-folder-wrapper--root' : 'flux-folder-wrapper--nested',
@@ -21,11 +23,11 @@ export function StyledWrapper({
   ]
     .filter(Boolean)
     .join(' ')
-  return <div ref={innerRef} class={classes} {...props} />
+  return <div ref={innerRef as any} class={classes} {...props} />
 }
 
-export function StyledTitle({ innerRef, className = '', ...props }: DivProps & { innerRef?: Ref<HTMLDivElement> }) {
-  return <div ref={innerRef} class={`flux-folder-title ${className}`.trim()} {...props} />
+export function StyledTitle({ innerRef, className = '', ...props }: DivProps & { innerRef?: RefLike<HTMLDivElement> }) {
+  return <div ref={innerRef as any} class={`flux-folder-title ${className}`.trim()} {...props} />
 }
 
 export function StyledContent({
@@ -34,7 +36,7 @@ export function StyledContent({
   isRoot = false,
   className = '',
   ...props
-}: DivProps & { innerRef?: Ref<HTMLDivElement>; toggled?: boolean; isRoot?: boolean }) {
+}: DivProps & { innerRef?: RefLike<HTMLDivElement>; toggled?: boolean; isRoot?: boolean }) {
   const classes = [
     'flux-folder-content',
     toggled ? 'flux-folder-content--open' : 'flux-folder-content--closed',
@@ -43,5 +45,5 @@ export function StyledContent({
   ]
     .filter(Boolean)
     .join(' ')
-  return <div ref={innerRef} class={classes} {...props} />
+  return <div ref={innerRef as any} class={classes} {...props} />
 }

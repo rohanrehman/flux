@@ -1,6 +1,8 @@
-import type { JSX, Ref } from 'preact'
+/** @jsxImportSource @madenowhere/phaze */
+import type { Signal } from '@madenowhere/phaze'
 
-type DivProps = JSX.HTMLAttributes<HTMLDivElement>
+type DivProps = JSX.IntrinsicElements['div']
+type RefLike<T> = ((el: T) => void) | { current: T | null } | Signal<T | undefined>
 
 export function StyledRoot({
   innerRef,
@@ -11,7 +13,14 @@ export function StyledRoot({
   hideTitleBar = false,
   className = '',
   ...props
-}: DivProps & { innerRef?: Ref<HTMLDivElement>; fill?: boolean; flat?: boolean; glass?: boolean; oneLineLabels?: boolean; hideTitleBar?: boolean }) {
+}: DivProps & {
+  innerRef?: RefLike<HTMLDivElement>
+  fill?: boolean
+  flat?: boolean
+  glass?: boolean
+  oneLineLabels?: boolean
+  hideTitleBar?: boolean
+}) {
   const classes = [
     'flux-root',
     fill ? 'flux-root--fill' : 'flux-root--fixed',
@@ -23,5 +32,5 @@ export function StyledRoot({
   ]
     .filter(Boolean)
     .join(' ')
-  return <div ref={innerRef} class={classes} {...props} />
+  return <div ref={innerRef as any} class={classes} {...props} />
 }
