@@ -5,7 +5,7 @@
  * `result()` inside JSX or an effect/computed to subscribe.
  */
 
-import { computed, type Computed } from '@madenowhere/phaze'
+import { computed, untrack, type Computed } from '@madenowhere/phaze'
 import { fluxStore } from '../store'
 import { useVisiblePaths } from '../hooks/useVisiblePaths'
 import { buildTree } from '../components/Flux/tree'
@@ -14,10 +14,16 @@ import type { StoreType, DataInput, Tree, Data, DataItem } from '../types/intern
 // Input type without the internal __refCount property
 type Input = Omit<DataItem, '__refCount'>
 
+// Mirrors hooks/useInput.ts: untrack the spread so the calling computed
+// only tracks `data[path]` existence, not every property. Otherwise every
+// drag tick re-fires this through any consumer reading inside a reactive
+// scope, cascading remounts up the tree.
 const getInputAtPath = (data: Data, path: string): Input | null => {
   if (!data[path]) return null
-  const { __refCount, ...input } = data[path]
-  return input
+  return untrack(() => {
+    const { __refCount, ...input } = data[path]
+    return input
+  })
 }
 
 /**
