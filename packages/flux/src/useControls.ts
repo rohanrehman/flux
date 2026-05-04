@@ -2,7 +2,6 @@ import { effect, untrack, cleanup, type Computed } from '@madenowhere/phaze'
 import { fluxStore } from './store'
 import { folder } from './helpers'
 import { useValuesForPath } from './hooks'
-import { useRenderRoot } from './components/Flux'
 import type { FolderSettings, Schema, SchemaToValues, StoreType, OnChangeHandler } from './types'
 
 // Preact-era `Inputs` type, inlined so we don't reach into preact/hooks.
@@ -113,12 +112,10 @@ export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, 
   const rawSchema = typeof schema === 'function' ? (schema as () => Schema)() : schema
   const _schema = folderName ? { [folderName]: folder(rawSchema, folderSettings) } : rawSchema
 
-  // GlobalPanel means that no store was provided, therefore we're using the fluxStore
-  const isGlobalPanel = !hookSettings?.store
-  const headless = hookSettings?.headless ?? false
-
-  useRenderRoot(isGlobalPanel && !headless)
-
+  // The preact-era auto-panel machinery (useRenderRoot / PanelLifecycle)
+  // was deleted with the move to phaze: it created a second render tree
+  // at #flux__root that doubled subscriptions and caused this hook to
+  // fire twice. Users now render <Flux> (or <FluxPanel>) explicitly.
   const store = hookSettings?.store || fluxStore
 
   /**
