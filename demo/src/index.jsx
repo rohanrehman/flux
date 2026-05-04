@@ -1,13 +1,9 @@
-import { render } from 'preact'
-import { LocationProvider } from 'preact-iso'
+import { render } from '@madenowhere/phaze'
 import App from './App'
 
-import 'flux/dist/flux.core.css'
+import '@rohanrehman/flux/dist/flux.core.css'
 import './index.css'
 
-render(
-  <LocationProvider>
-    <App />
-  </LocationProvider>,
-  document.getElementById('root')
-)
+// Phaze render takes a thunk (not a JSX element directly) and returns a
+// dispose function — see Stage 1c.4 commit notes.
+render(() => <App />, document.getElementById('root'))

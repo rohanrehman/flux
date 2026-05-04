@@ -1,6 +1,8 @@
 import { useControls, Flux } from 'flux'
-import { Contrast } from 'lucide-preact'
 
+// Phaze migration: useControls returns a Computed<T> instead of a plain
+// object — read it via data() inside JSX/effects to subscribe.
+// (lucide-preact dropped: preact-only, not phaze-compatible.)
 export default function App() {
   const data = useControls({
     number: 10,
@@ -9,14 +11,14 @@ export default function App() {
     color: {
       value: '#f00',
       hint: 'Hey, we support icons and hinting values and long text will wrap!',
-      label: <Contrast size={12} />,
+      label: '◐',
     },
   })
 
   return (
     <>
       <Flux titleBar={false} />
-      <pre>{JSON.stringify(data, null, '  ')}</pre>
+      <pre>{() => JSON.stringify(data(), null, '  ')}</pre>
     </>
   )
 }

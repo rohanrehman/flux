@@ -1,19 +1,29 @@
-import { lazy, Suspense } from 'preact/compat'
-import { Router } from 'preact-iso'
+import { signal, computed } from '@madenowhere/phaze'
+
+// Hash-based router: bind a phaze signal to location.hash. Avoids the
+// preact-iso/Suspense dependency and makes the route reactive everywhere
+// the signal is read.
+const initialRoute = () => globalThis.location?.hash?.replace(/^#/, '') || '/'
+const route = signal(initialRoute())
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('hashchange', () => route.set(initialRoute()))
+  window.addEventListener('popstate', () => route.set(initialRoute()))
+}
+
+function navigate(path) {
+  if (location.hash !== `#${path}`) location.hash = path
+}
+
+// Static-import sandboxes for now. Tradeoff: bigger initial bundle but
+// no lazy-loading wrapper that has to play games with phaze's
+// "function-as-JSX-child gets called" semantics. We'll revisit lazy
+// loading once Stage 3 is otherwise solid.
+import FluxMinimal from './sandboxes/flux-minimal/src/App'
 
 const sandboxes = {
-  'flux-minimal': lazy(() => import('./sandboxes/flux-minimal/src/App')),
-  'flux-headless': lazy(() => import('./sandboxes/flux-headless/src/App')),
-  'flux-busy': lazy(() => import('./sandboxes/flux-busy/src/App')),
-  'flux-advanced-panels': lazy(() => import('./sandboxes/flux-advanced-panels/src/App')),
-  'flux-scroll': lazy(() => import('./sandboxes/flux-scroll/src/App')),
-  'flux-ui': lazy(() => import('./sandboxes/flux-ui/src/App')),
-  'flux-theme': lazy(() => import('./sandboxes/flux-theme/src/App')),
-  'flux-plugin-spring': lazy(() => import('./sandboxes/flux-plugin-spring/src/App')),
-  'flux-plugin-plot': lazy(() => import('./sandboxes/flux-plugin-plot/src/App')),
-  'flux-plugin-bezier': lazy(() => import('./sandboxes/flux-plugin-bezier/src/App')),
-  'flux-plugin-dates': lazy(() => import('./sandboxes/flux-plugin-dates/src/App')),
-  'flux-custom-plugin': lazy(() => import('./sandboxes/flux-custom-plugin/src/App')),
+  'flux-minimal': FluxMinimal,
+  // Other sandboxes will be added back once they've been migrated.
 }
 
 function Home() {
@@ -22,7 +32,14 @@ function Home() {
       <h1 style={{ fontWeight: 600, marginBottom: 32 }}>Flux demos</h1>
       <nav style={{ display: 'grid', gap: 10 }}>
         {Object.keys(sandboxes).map((name) => (
-          <a key={name} href={`/${name}`} style={{ color: 'inherit' }}>
+          <a
+            key={name}
+            href={`#/${name}`}
+            style={{ color: 'inherit' }}
+            onClick={(e) => {
+              e.preventDefault()
+              navigate(`/${name}`)
+            }}>
             {name}
           </a>
         ))}
@@ -31,41 +48,59 @@ function Home() {
   )
 }
 
-function SandboxPage({ name }) {
+function BackLink() {
+  return (
+    <a
+      href="#/"
+      onClick={(e) => {
+        e.preventDefault()
+        navigate('/')
+      }}
+      style={{
+        position: 'fixed',
+        left: 10,
+        bottom: 10,
+        zIndex: 9999,
+        padding: '8px 12px',
+        background: '#000',
+        color: '#fff',
+        fontWeight: 500,
+        fontSize: 14,
+        textDecoration: 'none',
+        borderRadius: 2,
+        border: '1px solid #333',
+      }}>
+      ← Back
+    </a>
+  )
+}
+
+function SandboxView({ name }) {
   const Component = sandboxes[name]
-  if (!Component) return <p style={{ padding: 20 }}>Not found</p>
   return (
     <>
-      <a
-        href="/"
-        style={{
-          position: 'fixed',
-          left: 10,
-          bottom: 10,
-          zIndex: 9999,
-          padding: '8px 12px',
-          background: '#000',
-          color: '#fff',
-          fontWeight: 500,
-          fontSize: 14,
-          textDecoration: 'none',
-          borderRadius: 2,
-          border: '1px solid #333',
-        }}>
-        ← Back
-      </a>
-      <Suspense fallback={null}>
-        <Component />
-      </Suspense>
+      <BackLink />
+      <Component />
     </>
   )
 }
 
+const currentSandboxName = computed(() => {
+  const r = route()
+  if (r === '/' || r === '') return null
+  const name = r.replace(/^\//, '')
+  return name in sandboxes ? name : null
+})
+
 export default function App() {
   return (
-    <Router>
-      <Home path="/" />
-      <SandboxPage path="/:name" />
-    </Router>
+    <>
+      {() => {
+        const r = route()
+        if (r === '/' || r === '') return <Home />
+        const name = currentSandboxName()
+        return name ? <SandboxView name={name} /> : <p style={{ padding: 20 }}>Not found</p>
+      }}
+    </>
   )
 }
