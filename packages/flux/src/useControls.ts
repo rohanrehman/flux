@@ -155,10 +155,13 @@ export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, 
   const values = useValuesForPath(store, renderPaths, initialData)
 
   // Initialize the store with initial data and arrange disposal on
-  // component unmount. The effect runs once (no tracked deps); cleanup
-  // fires when the parent owner (component) disposes.
+  // component unmount. The effect's only purpose is to scope the
+  // cleanup() registration — addData itself reads state.data internally
+  // (`if (!!input)` per-path) and writes to the same paths, which
+  // without untrack creates a self-write loop where the effect's reads
+  // make it subscribe to its own writes.
   effect(() => {
-    store.addData(initialData, false)
+    untrack(() => store.addData(initialData, false))
     cleanup(() => store.disposePaths(paths))
   })
 

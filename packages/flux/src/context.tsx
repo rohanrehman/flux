@@ -77,9 +77,11 @@ export function setCurrentInput(input: InputContextProps): void {
   currentInput = input
 }
 
+// Returns an empty bag when called outside a row render — preact-era
+// behavior. Callers like the title-bar's useDrag legitimately have no
+// input context and rely on optional-chained access (emitOnEditStart?.()
+// etc.) being a no-op. Throwing here would force every non-row caller
+// to add ad-hoc try/catch.
 export function useInputContext<T = {}>(): InputContextProps & T {
-  if (!currentInput) {
-    throw new Error('flux: useInputContext called outside a row render')
-  }
-  return currentInput as InputContextProps & T
+  return (currentInput ?? ({} as InputContextProps)) as InputContextProps & T
 }
