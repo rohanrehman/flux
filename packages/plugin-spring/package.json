@@ -23,13 +23,13 @@
   },
   "peerDependencies": {
     "@rohanrehman/flux": ">=0.1.0",
-    "@madenowhere/phaze": ">=0.0.9"
+    "@madenowhere/phaze": ">=0.0.10"
   },
   "dependencies": {
     "@madenowhere/photon": "^0.0.7"
   },
   "devDependencies": {
     "@rohanrehman/flux": "workspace:*",
-    "@madenowhere/phaze": "^0.0.9"
+    "@madenowhere/phaze": "^0.0.10"
   }
 }

@@ -23,13 +23,13 @@
   },
   "peerDependencies": {
     "@rohanrehman/flux": ">=0.1.0",
-    "@madenowhere/phaze": ">=0.0.9"
+    "@madenowhere/phaze": ">=0.0.10"
   },
   "dependencies": {
     "mathjs": "^15.1.1"
   },
   "devDependencies": {
     "@rohanrehman/flux": "workspace:*",
-    "@madenowhere/phaze": "^0.0.9"
+    "@madenowhere/phaze": "^0.0.10"
   }
 }

@@ -43,14 +43,14 @@
     "dev": "tsup --watch"
   },
   "peerDependencies": {
-    "@madenowhere/phaze": ">=0.0.9"
+    "@madenowhere/phaze": ">=0.0.10"
   },
   "dependencies": {
     "colord": "^2.9.3",
     "dequal": "^2.0.3"
   },
   "devDependencies": {
-    "@madenowhere/phaze": "^0.0.9",
+    "@madenowhere/phaze": "^0.0.10",
     "@tailwindcss/cli": "^4.2.2"
   }
 }

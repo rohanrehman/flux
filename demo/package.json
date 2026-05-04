@@ -12,14 +12,13 @@
     "@flux-ui/plugin-dates": "workspace:*",
     "@flux-ui/plugin-plot": "workspace:*",
     "@flux-ui/plugin-spring": "workspace:*",
+    "@madenowhere/phaze": "^0.0.10",
+    "@madenowhere/photon": "^0.0.7",
     "@rohanrehman/flux": "workspace:*",
-    "noisejs": "^2.1.0",
-    "preact": "^10.29.0",
-    "preact-iso": "^2.0.0"
+    "noisejs": "^2.1.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",
-    "@preact/preset-vite": "^2.0.0",
     "typescript": "catalog:",
     "vite": "^8.0.3"
   }
