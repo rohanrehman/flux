@@ -42,7 +42,7 @@ export default function App() {
       <Flux oneLineLabels />
 
       <div className="App">
-        <pre>{JSON.stringify(data, null, '  ')}</pre>
+        <pre>{() => JSON.stringify(data(), null, '  ')}</pre>
       </div>
     </>
   )

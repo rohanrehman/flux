@@ -20,10 +20,31 @@ function navigate(path) {
 // "function-as-JSX-child gets called" semantics. We'll revisit lazy
 // loading once Stage 3 is otherwise solid.
 import FluxMinimal from './sandboxes/flux-minimal/src/App'
+import FluxAdvancedPanels from './sandboxes/flux-advanced-panels/src/App'
+import FluxBusy from './sandboxes/flux-busy/src/App'
+import FluxCustomPlugin from './sandboxes/flux-custom-plugin/src/App'
+import FluxHeadless from './sandboxes/flux-headless/src/App'
+import FluxPluginBezier from './sandboxes/flux-plugin-bezier/src/App'
+import FluxPluginDates from './sandboxes/flux-plugin-dates/src/App'
+import FluxPluginPlot from './sandboxes/flux-plugin-plot/src/App'
+import FluxPluginSpring from './sandboxes/flux-plugin-spring/src/App'
+import FluxScroll from './sandboxes/flux-scroll/src/App'
+import FluxTheme from './sandboxes/flux-theme/src/App'
+import FluxUI from './sandboxes/flux-ui/src/App'
 
 const sandboxes = {
   'flux-minimal': FluxMinimal,
-  // Other sandboxes will be added back once they've been migrated.
+  'flux-advanced-panels': FluxAdvancedPanels,
+  'flux-busy': FluxBusy,
+  'flux-custom-plugin': FluxCustomPlugin,
+  'flux-headless': FluxHeadless,
+  'flux-plugin-bezier': FluxPluginBezier,
+  'flux-plugin-dates': FluxPluginDates,
+  'flux-plugin-plot': FluxPluginPlot,
+  'flux-plugin-spring': FluxPluginSpring,
+  'flux-scroll': FluxScroll,
+  'flux-theme': FluxTheme,
+  'flux-ui': FluxUI,
 }
 
 function Home() {

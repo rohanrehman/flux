@@ -1,21 +1,7 @@
-import { useRef, useEffect } from 'preact/hooks'
-import { useControls, useCreateStore, folder, Flux, FluxPanel, monitor, button } from 'flux'
+import { useControls, createStore, folder, Flux, FluxPanel, button } from 'flux'
 import { spring } from '@flux-ui/plugin-spring'
-import { Noise } from 'noisejs'
-
-const noise = new Noise(Math.random())
 
 function Controls() {
-  const ref = useRef(4)
-  useEffect(() => {
-    let x = 0
-    setInterval(() => {
-      x += 0.1
-      const t = Date.now()
-      ref.current = 2 * noise.simplex2(3 * x + t, x) + (3 * Math.sin(x)) / x
-    }, 30)
-  }, [])
-
   useControls({
     number: { value: 10, step: 0.25 },
     fine: { value: 0.0001, min: 0, max: 0.001, step: 0.0001 },
@@ -23,7 +9,6 @@ function Controls() {
     select: { options: ['x', 'y', ['x', 'y']] },
     interval: { min: -100, max: 100, value: [10, 15] },
     boolean: true,
-    //refMonitor: monitor(ref, { graph: true, interval: 60 }),
     folder2: folder(
       {
         color2: 'rgba(255, 255, 255, 1)',
@@ -47,22 +32,22 @@ function Controls() {
       },
       { render: (get) => get('boolean') }
     ),
-    colorObj: { r: 1, g: 2, b: 3, a: 0.5},
+    colorObj: { r: 1, g: 2, b: 3, a: 0.5 },
   })
 
   return null
 }
 
 export default function App() {
-  const colorsStore = useCreateStore()
-  const radiiStore = useCreateStore()
-  const spaceStore = useCreateStore()
-  const fontSizesStore = useCreateStore()
-  const sizesStore = useCreateStore()
-  const borderWidthsStore = useCreateStore()
-  const fontWeightsStore = useCreateStore()
-  const shadowsStore = useCreateStore()
-  const glassStore = useCreateStore()
+  const colorsStore = createStore()
+  const radiiStore = createStore()
+  const spaceStore = createStore()
+  const fontSizesStore = createStore()
+  const sizesStore = createStore()
+  const borderWidthsStore = createStore()
+  const fontWeightsStore = createStore()
+  const shadowsStore = createStore()
+  const glassStore = createStore()
 
   const colors = useControls(
     {
@@ -178,14 +163,6 @@ export default function App() {
     { store: glassStore }
   )
 
-  const glass = {
-    enabled: String(glassRaw.enabled),
-    invert: glassRaw.invert ? '1' : '0',
-    opacity: String(glassRaw.opacity),
-    blur: `${glassRaw.blur}px`,
-    vibrancy: String(glassRaw.vibrancy),
-  }
-
   const shadows = useControls(
     {
       shadows: folder({
@@ -199,15 +176,34 @@ export default function App() {
     { store: shadowsStore }
   )
 
-  const shadowsTheme = {
-    panelX: `${shadows.panelX}px`,
-    panelY: `${shadows.panelY}px`,
-    panelBlur: `${shadows.panelBlur}px`,
-    panelSpread: `${shadows.panelSpread}px`,
-    panelColor: shadows.panelColor,
-  }
+  // Builds a flattened theme snapshot from current control values. Called
+  // once at mount for <Flux theme={...}> (Flux merges theme at mount —
+  // live theme updates would require a remount, same as preact-era).
+  const buildTheme = () => ({
+    colors: colors(),
+    radii: radii(),
+    space: space(),
+    fontSizes: fontSizes(),
+    sizes: sizes(),
+    borderWidths: borderWidths(),
+    fontWeights: fontWeights(),
+    shadows: {
+      panelX: `${shadows().panelX}px`,
+      panelY: `${shadows().panelY}px`,
+      panelBlur: `${shadows().panelBlur}px`,
+      panelSpread: `${shadows().panelSpread}px`,
+      panelColor: shadows().panelColor,
+    },
+    glass: {
+      enabled: String(glassRaw().enabled),
+      invert: glassRaw().invert ? '1' : '0',
+      opacity: String(glassRaw().opacity),
+      blur: `${glassRaw().blur}px`,
+      vibrancy: String(glassRaw().vibrancy),
+    },
+  })
 
-  const theme = { colors, radii, space, fontSizes, sizes, borderWidths, fontWeights, shadows: shadowsTheme, glass }
+  const theme = buildTheme()
 
   return (
     <div style={{ background: 'linear-gradient(135deg, #1a1a2e 0%,  #f9f9f9 100%, #8a8a8c 100%)', minHeight: '100vh' }}>
@@ -232,21 +228,8 @@ export default function App() {
         <FluxPanel fill flat titleBar={false} store={shadowsStore} />
         <FluxPanel fill flat titleBar={false} store={glassStore} />
       </div>
-      <pre>{JSON.stringify(theme, null, '  ')}</pre>
+      <pre>{() => JSON.stringify(buildTheme(), null, '  ')}</pre>
       <Controls />
     </div>
   )
-}
-
-export function App4() {
-  const x = useControls({
-    number: 10,
-    minmax: {
-      value: 10.5,
-      min: 5.5,
-      max: 30.5,
-    },
-  })
-
-  return <pre>{JSON.stringify(x, null, '  ')}</pre>
 }

@@ -1,39 +1,46 @@
-import { useEffect, useCallback, useState, useRef } from 'preact/hooks'
-import { folder, Flux, useControls, FluxPanel, useCreateStore, button } from 'flux'
+/** @jsxImportSource @madenowhere/phaze */
+import { signal, effect, cleanup } from '@madenowhere/phaze'
+import { folder, Flux, useControls, FluxPanel, createStore, button } from 'flux'
 import './styles.css'
 
-function useDrag(handler) {
-  const state = useRef({ active: false, startX: 0, startY: 0, memo: undefined })
-  return useCallback((...args) => ({
+// Drag handler — phaze components run once, so the state object is just a
+// plain local. The returned `bind` is reused for every handle on the box.
+function makeDrag(handler) {
+  const state = { active: false, startX: 0, startY: 0, memo: undefined }
+  return (...args) => ({
     onPointerDown(e) {
       e.currentTarget.setPointerCapture(e.pointerId)
-      state.current = { active: true, startX: e.clientX, startY: e.clientY, memo: undefined }
-      state.current.memo = handler({ first: true, movement: [0, 0], args, memo: undefined })
+      state.active = true
+      state.startX = e.clientX
+      state.startY = e.clientY
+      state.memo = handler({ first: true, movement: [0, 0], args, memo: undefined })
     },
     onPointerMove(e) {
-      if (!state.current.active) return
-      const mx = e.clientX - state.current.startX
-      const my = e.clientY - state.current.startY
-      state.current.memo = handler({ first: false, movement: [mx, my], args, memo: state.current.memo })
+      if (!state.active) return
+      const mx = e.clientX - state.startX
+      const my = e.clientY - state.startY
+      state.memo = handler({ first: false, movement: [mx, my], args, memo: state.memo })
     },
-    onPointerUp() { state.current.active = false },
-  }), [handler])
+    onPointerUp() {
+      state.active = false
+    },
+  })
 }
 
-function useDropzone({ onDrop } = {}) {
-  const [isDragAccept, setIsDragAccept] = useState(false)
+function makeDropzone({ onDrop } = {}) {
+  const isDragAccept = signal(false)
 
   const getRootProps = () => ({
     onDragOver: (e) => {
       e.preventDefault()
-      setIsDragAccept(true)
+      isDragAccept.set(true)
     },
     onDragLeave: (e) => {
-      if (!e.currentTarget.contains(e.relatedTarget)) setIsDragAccept(false)
+      if (!e.currentTarget.contains(e.relatedTarget)) isDragAccept.set(false)
     },
     onDrop: (e) => {
       e.preventDefault()
-      setIsDragAccept(false)
+      isDragAccept.set(false)
       const files = Array.from(e.dataTransfer?.files ?? []).filter((f) => f.type.startsWith('image/'))
       if (files.length) onDrop?.(files)
     },
@@ -43,9 +50,9 @@ function useDropzone({ onDrop } = {}) {
 }
 
 function Box({ index, selected, setSelect }) {
-  const store = useCreateStore()
+  const store = createStore()
 
-  const [{ position, size, color, fillColor, fillMode, fillImage, width }, set] = useControls(
+  const [box, set] = useControls(
     () => ({
       position: {
         value: [window.innerWidth / 2 - 150, window.innerHeight / 2],
@@ -68,7 +75,9 @@ function Box({ index, selected, setSelect }) {
     { store }
   )
 
-  const bind = useDrag(({ first, movement: [x, y], args: controls, memo = { position, size } }) => {
+  const bind = makeDrag(({ first, movement: [x, y], args: controls, memo }) => {
+    const current = box()
+    if (!memo) memo = { position: current.position, size: current.size }
     if (first) setSelect([index, store])
     let _position = [...memo.position]
     let _size = { ...memo.size }
@@ -94,33 +103,35 @@ function Box({ index, selected, setSelect }) {
     return memo
   })
 
-  useEffect(() => {
+  effect(() => {
     setSelect([index, store])
-  }, [index, store, setSelect])
+  })
 
-  const onDrop = useCallback(
-    (acceptedFiles) => {
-      if (!acceptedFiles.length) return
-      set({ fillImage: acceptedFiles[0], fillMode: 'image' })
-    },
-    [set]
-  )
+  const onDrop = (acceptedFiles) => {
+    if (!acceptedFiles.length) return
+    set({ fillImage: acceptedFiles[0], fillMode: 'image' })
+  }
 
-  const { getRootProps, isDragAccept } = useDropzone({ onDrop })
-
-  const background = fillMode === 'color' || !fillImage ? fillColor : `center / cover no-repeat url(${fillImage})`
+  const { getRootProps, isDragAccept } = makeDropzone({ onDrop })
 
   return (
     <div
       {...getRootProps()}
       tabIndex={index}
-      className={`box ${selected ? 'selected' : ''}`}
-      style={{
-        background,
-        width: size.width,
-        height: size.height,
-        boxShadow: `inset 0 0 0 ${width}px ${color}`,
-        transform: `translate(${position[0]}px, ${position[1]}px)`,
+      className={() => `box ${selected() ? 'selected' : ''}`}
+      style={() => {
+        const b = box()
+        const background =
+          b.fillMode === 'color' || !b.fillImage
+            ? b.fillColor
+            : `center / cover no-repeat url(${b.fillImage})`
+        return {
+          background,
+          width: b.size.width,
+          height: b.size.height,
+          boxShadow: `inset 0 0 0 ${b.width ?? 0}px ${b.color ?? '#000'}`,
+          transform: `translate(${b.position[0]}px, ${b.position[1]}px)`,
+        }
       }}>
       <span className="handle top" {...bind(['height', -1])} />
       <span className="handle right" {...bind(['width', 1])} />
@@ -133,49 +144,58 @@ function Box({ index, selected, setSelect }) {
       <span
         className="handle position"
         {...bind(['position'])}
-        style={{ background: isDragAccept ? '#18a0fb66' : 'transparent' }}
+        style={() => ({ background: isDragAccept() ? '#18a0fb66' : 'transparent' })}
       />
     </div>
   )
 }
 
 export default function App() {
-  const [boxes, setBoxes] = useState([])
-  const [[selection, store], setSelection] = useState([-1, null])
+  const boxes = signal([])
+  const selection = signal([-1, null])
 
-  useEffect(() => {
+  effect(() => {
     function deleteSelection(e) {
-      if (e.key === 'Backspace' && selection > -1 && e.target.classList.contains('selected')) {
-        setBoxes((b) => {
-          const _b = [...b]
-          _b.splice(selection, 1)
-          return _b
-        })
-        setSelection([-1, null])
+      const [sel] = selection()
+      if (e.key === 'Backspace' && sel > -1 && e.target.classList.contains('selected')) {
+        const _b = [...boxes()]
+        _b.splice(sel, 1)
+        boxes.set(_b)
+        selection.set([-1, null])
       }
     }
     window.addEventListener('keydown', deleteSelection)
-    return () => window.removeEventListener('keydown', deleteSelection)
-  }, [selection])
+    cleanup(() => window.removeEventListener('keydown', deleteSelection))
+  })
 
   const unSelect = (e) => {
-    if (e.target === e.currentTarget) setSelection([-1, null])
+    if (e.target === e.currentTarget) selection.set([-1, null])
   }
 
-  const addBox = () => setBoxes((b) => [...b, Date.now()])
+  const addBox = () => boxes.set([...boxes(), Date.now()])
 
   useControls({ 'New Box': button(addBox) })
 
   return (
     <div className="wrapper">
       <div className="canvas" onClick={unSelect}>
-        {boxes.map((v, i) => (
-          <Box key={v} selected={selection === i} index={i} setSelect={setSelection} />
-        ))}
+        {() =>
+          boxes().map((v, i) => (
+            <Box
+              key={v}
+              selected={() => selection()[0] === i}
+              index={i}
+              setSelect={(s) => selection.set(s)}
+            />
+          ))
+        }
       </div>
       <div className="panel">
         <Flux fill flat titleBar={false} />
-        <FluxPanel store={store} fill flat titleBar={false} />
+        {() => {
+          const store = selection()[1]
+          return store && <FluxPanel store={store} fill flat titleBar={false} />
+        }}
       </div>
     </div>
   )

@@ -2,7 +2,7 @@ import { date } from '@flux-ui/plugin-dates'
 import { useControls } from 'flux'
 
 export default function App() {
-  const { birthday } = useControls({
+  const data = useControls({
     birthday: date({
       date: new Date(),
       locale: 'en-UK',
@@ -10,5 +10,5 @@ export default function App() {
     }),
   })
 
-  return <div className="App">{birthday.formattedDate}</div>
+  return <div className="App">{() => data().birthday.formattedDate}</div>
 }

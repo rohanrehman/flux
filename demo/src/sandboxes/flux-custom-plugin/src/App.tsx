@@ -1,3 +1,4 @@
+/** @jsxImportSource @madenowhere/phaze */
 import { Flux, useControls } from 'flux'
 import { createPlugin, useInputContext, FluxInputProps, Components } from 'flux/plugin'
 
@@ -9,14 +10,21 @@ type GreenOrBlueInput = GreenOrBlueType & GreenOrBlueSettings
 
 type GreenOrBlueProps = FluxInputProps<GreenOrBlueType, GreenOrBlueSettings, string>
 
+const readDisplay = (v: unknown): string => {
+  const x = typeof v === 'function' ? (v as () => unknown)() : v
+  return String(x ?? '')
+}
+
 function GreenOrBlue() {
   const props = useInputContext<GreenOrBlueProps>()
   const { label, displayValue, onUpdate, onChange, settings } = props
-  const background = displayValue
 
   return (
     <Row input>
-      <Label style={{ background, opacity: settings.alpha }}>{label}</Label>
+      <Label
+        style={() => ({ background: readDisplay(displayValue), opacity: settings.alpha })}>
+        {label}
+      </Label>
       <String displayValue={displayValue} onUpdate={onUpdate} onChange={onChange} />
     </Row>
   )
@@ -50,7 +58,7 @@ export default function App() {
   return (
     <>
       <Flux titleBar={false} />
-      <pre>{JSON.stringify(data, null, '  ')}</pre>
+      <pre>{() => JSON.stringify(data(), null, '  ')}</pre>
     </>
   )
 }

@@ -1,9 +1,8 @@
-import { useRef } from 'preact/hooks'
 import { useControls, monitor } from 'flux'
 import { plot } from '@flux-ui/plugin-plot'
 
 export default function App() {
-  const p = useRef(performance.now())
+  const startTime = performance.now()
   const values = useControls({
     w: 1,
     y1: plot({ expression: 'cos(x*w)', boundsX: [-10, 10] }),
@@ -11,27 +10,21 @@ export default function App() {
     y3: plot({ expression: 'tan(y2)', boundsX: [-4, 4], boundsY: [-10, 10] }),
   })
 
-  useControls(
-    {
-      'y1(t)': monitor(
-        () => {
-          const t = performance.now() - p.current
-          return values.y1(t / 100)
-        },
-        { graph: true, interval: 30 }
-      ),
-    },
-    [values.y1]
-  )
+  useControls({
+    'y1(t)': monitor(
+      () => {
+        const t = performance.now() - startTime
+        return values().y1(t / 100)
+      },
+      { graph: true, interval: 30 }
+    ),
+  })
 
-  const t1 = values.y1(1)
-  const t2 = values.y2(1)
-  const t3 = values.y3(1)
   return (
     <div className="App">
-      <pre>y1(1) = {t1}</pre>
-      <pre>y2(1) = {t2}</pre>
-      <pre>y3(1) = {t3}</pre>
+      <pre>{() => `y1(1) = ${values().y1(1)}`}</pre>
+      <pre>{() => `y2(1) = ${values().y2(1)}`}</pre>
+      <pre>{() => `y3(1) = ${values().y3(1)}`}</pre>
     </div>
   )
 }

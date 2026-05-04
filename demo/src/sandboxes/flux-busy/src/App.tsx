@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'preact/hooks'
+/** @jsxImportSource @madenowhere/phaze */
+import { signal, effect, cleanup } from '@madenowhere/phaze'
 import { useControls, folder, button, monitor, Flux } from 'flux'
 // @ts-ignore
 import { Noise } from 'noisejs'
-import { Ruler } from 'lucide-preact'
 import styles from './styles.module.css'
 
 const noise = new Noise(Math.random())
@@ -12,27 +12,26 @@ function frame() {
   return noise.simplex2(t / 1000, t / 100)
 }
 
-function useFullscreen(
-  ref: { current: Element | null },
-  enabled: boolean,
-  { onClose }: { onClose?: () => void } = {}
-) {
-  useEffect(() => {
-    if (enabled) {
-      ref.current?.requestFullscreen?.()
+// Tracks fullscreen state, listening to fullscreenchange and clearing on
+// unmount via cleanup(). Phaze components run once, so the effect's
+// closure captures `enabled` as a getter, not a value.
+function useFullscreen(enabled: () => boolean, { onClose }: { onClose?: () => void } = {}) {
+  effect(() => {
+    if (enabled()) {
+      document.documentElement?.requestFullscreen?.()
     } else if (document.fullscreenElement) {
       document.exitFullscreen?.()
     }
-  }, [enabled])
+  })
 
-  useEffect(() => {
+  effect(() => {
     if (!onClose) return
     const handler = () => {
       if (!document.fullscreenElement) onClose()
     }
     document.addEventListener('fullscreenchange', handler)
-    return () => document.removeEventListener('fullscreenchange', handler)
-  }, [onClose])
+    cleanup(() => document.removeEventListener('fullscreenchange', handler))
+  })
 }
 
 const ExtraControls = () => {
@@ -46,7 +45,7 @@ const ExtraControls = () => {
           pos2dArr: [100, 200],
           pos3d: {
             value: { x: 0.3, y: 0.1, z: 0.5 },
-            label: <Ruler size={12} />,
+            label: '⊞',
           },
           pos3dArr: [Math.PI / 2, 20, 4],
         },
@@ -55,7 +54,7 @@ const ExtraControls = () => {
     },
     { order: -1 }
   )
-  return <pre>{JSON.stringify(data, null, '  ')}</pre>
+  return <pre>{() => JSON.stringify(data(), null, '  ')}</pre>
 }
 
 function Controls() {
@@ -84,14 +83,14 @@ function Controls() {
       { color: 'yellow', order: -1 }
     ),
   })
-  return <pre>{JSON.stringify(data, null, '  ')}</pre>
+  return <pre>{() => JSON.stringify(data(), null, '  ')}</pre>
 }
 
 export default function App() {
-  const [count, setCount] = useState(0)
-  const [show, setShow] = useState(true)
+  const count = signal(0)
+  const show = signal(true)
 
-  const [{ showTitleBar, title, drag, filter, fullScreen, oneLineLabels }, set] = useControls(
+  const panel = useControls(
     'Panel',
     () => ({
       showTitleBar: true,
@@ -103,26 +102,37 @@ export default function App() {
     }),
     { color: 'royalblue' }
   )
+  // useControls returns a Computed when called with schema-only; with a
+  // function-schema it returns [Computed, set]. Normalise.
+  const [panelData, set] = Array.isArray(panel) ? panel : [panel, () => {}]
 
-  useFullscreen({ current: document.documentElement }, fullScreen, {
+  useFullscreen(() => panelData().fullScreen, {
     onClose: () => set({ fullScreen: false }),
   })
 
   return (
     <>
-      <Flux titleBar={showTitleBar && { drag, title, filter }} oneLineLabels={oneLineLabels} />
+      {() => {
+        const p = panelData()
+        return (
+          <Flux
+            titleBar={p.showTitleBar && { drag: p.drag, title: p.title, filter: p.filter }}
+            oneLineLabels={p.oneLineLabels}
+          />
+        )
+      }}
       <div className={styles.buttons}>
-        Reference count: {count}
-        <button onClick={() => setCount((c) => Math.max(0, c - 1))}>-</button>
-        <button onClick={() => setCount((c) => c + 1)}>+</button>
-        <button onClick={() => setShow((s) => !s)}>Toggle Main Controls</button>
+        Reference count: {() => count()}
+        <button onClick={() => count.set(Math.max(0, count() - 1))}>-</button>
+        <button onClick={() => count.set(count() + 1)}>+</button>
+        <button onClick={() => show.set(!show())}>Toggle Main Controls</button>
       </div>
-      {show && <Controls />}
-      {Array(count)
-        .fill(0)
-        .map((_, i) => (
-          <ExtraControls key={i} />
-        ))}
+      {() => show() && <Controls />}
+      {() =>
+        Array(count())
+          .fill(0)
+          .map((_, i) => <ExtraControls key={i} />)
+      }
     </>
   )
 }

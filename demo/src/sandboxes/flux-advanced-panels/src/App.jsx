@@ -1,16 +1,16 @@
-import { useControls, useStoreContext, useCreateStore, FluxPanel, FluxStoreProvider } from 'flux'
+import { useControls, createStore, FluxPanel } from 'flux'
 
-function MyComponent() {
-  const store = useStoreContext()
-  useControls({ point: [0, 0] }, { store })
-  return null
-}
-
+// FluxStoreProvider is gone in the phaze migration — phaze has no
+// createContext primitive. Pass the store explicitly to each useControls
+// call instead; this matches the outcome of the preact-era provider
+// without the wrapper component.
 export default function App() {
-  const store1 = useCreateStore()
-  const store2 = useCreateStore()
+  const store1 = createStore()
+  const store2 = createStore()
   useControls({ color: '#fff' }, { store: store1 })
   useControls({ boolean: true }, { store: store2 })
+  useControls({ point: [0, 0] }, { store: store1 })
+
   return (
     <div
       style={{
@@ -22,9 +22,6 @@ export default function App() {
       }}>
       <FluxPanel store={store1} fill flat titleBar={false} />
       <FluxPanel store={store2} fill flat titleBar={false} />
-      <FluxStoreProvider store={store1}>
-        <MyComponent />
-      </FluxStoreProvider>
     </div>
   )
 }
