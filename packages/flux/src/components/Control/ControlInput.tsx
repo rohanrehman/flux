@@ -1,7 +1,7 @@
 /** @jsxImportSource @madenowhere/phaze */
 import { Plugins } from '../../plugin'
 import { warn, FluxErrors } from '../../utils/log'
-import { setCurrentInput } from '../../context'
+import { setCurrentInput, useStoreContext } from '../../context'
 import { useInputSetters } from '../../hooks'
 import { StyledInputWrapper } from '../UI/StyledUI'
 import type { DataInput } from '../../types'
@@ -28,7 +28,14 @@ export function ControlInput({
   disabled,
   ...rest
 }: ControlInputProps) {
-  const { displayValue, onChange, onUpdate } = useInputSetters({ type, value, settings, setValue })
+  // Reactive read of the live value at this path. Threaded into
+  // useInputSetters so the displayValue mirror tracks store updates
+  // (drag, programmatic set, hot-reload). Without this, displayValue
+  // captures `value` at mount and never refreshes — visible as a stuck
+  // scrubber during slider drag.
+  const store = useStoreContext()
+  const valueGetter = () => (store.state.data[path] as DataInput | undefined)?.value
+  const { displayValue, onChange, onUpdate } = useInputSetters({ type, value, settings, setValue, valueGetter })
 
   const Input = Plugins[type].component
   if (!Input) {
