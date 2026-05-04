@@ -1,5 +1,5 @@
 import { store } from '@madenowhere/phaze/store'
-import { untrack } from '@madenowhere/phaze'
+import { untrack, batch } from '@madenowhere/phaze'
 import { updateInput, warn, FluxErrors, getUid, getDataFromSchema } from './utils'
 import { SpecialInputs, MappedPaths, DataInput } from './types'
 import type { FolderSettings, State, StoreType } from './types'
@@ -93,17 +93,19 @@ export const Store = function (this: StoreType) {
    * @param paths
    */
   this.disposePaths = (paths) => {
-    const data = state.data
-    paths.forEach((path) => {
-      if (path in data) {
-        const input = data[path]
-        input.__refCount--
-        if (input.__refCount === 0 && input.type in SpecialInputs) {
-          // this makes sure special inputs such as buttons are properly
-          // refreshed. This might need some attention though.
-          delete data[path]
+    batch(() => {
+      const data = state.data
+      paths.forEach((path) => {
+        if (path in data) {
+          const input = data[path]
+          input.__refCount--
+          if (input.__refCount === 0 && input.type in SpecialInputs) {
+            // this makes sure special inputs such as buttons are properly
+            // refreshed. This might need some attention though.
+            delete data[path]
+          }
         }
-      }
+      })
     })
   }
 
@@ -138,25 +140,33 @@ export const Store = function (this: StoreType) {
    * @param override force-overwrite settings even when refCount > 0
    */
   this.addData = (newData, override) => {
-    const data = state.data
-    Object.entries(newData).forEach(([path, newInputData]) => {
-      let input = data[path]
+    // Batch every write across all paths into a single notification flush.
+    // Without this, N inserted paths fire N separate KEYS bumps, each of
+    // which cascades through useVisiblePaths → tree → FluxRoot's
+    // TreeWrapper thunk and forces the entire panel to re-mount N times
+    // at startup. Same hazard on hot-update with `Object.assign(input,
+    // rest)` mutating multiple properties of an existing input.
+    batch(() => {
+      const data = state.data
+      Object.entries(newData).forEach(([path, newInputData]) => {
+        let input = data[path]
 
-      // If an input already exists compare its values and increase the reference __refCount.
-      if (!!input) {
-        // @ts-ignore
-        const { type, value, ...rest } = newInputData
-        if (type !== input.type) {
-          warn(FluxErrors.INPUT_TYPE_OVERRIDE, path, input.type, type)
-        } else {
-          if (input.__refCount === 0 || override) {
-            Object.assign(input, rest)
+        // If an input already exists compare its values and increase the reference __refCount.
+        if (!!input) {
+          // @ts-ignore
+          const { type, value, ...rest } = newInputData
+          if (type !== input.type) {
+            warn(FluxErrors.INPUT_TYPE_OVERRIDE, path, input.type, type)
+          } else {
+            if (input.__refCount === 0 || override) {
+              Object.assign(input, rest)
+            }
+            input.__refCount++
           }
-          input.__refCount++
+        } else {
+          data[path] = { ...newInputData, __refCount: 1 }
         }
-      } else {
-        data[path] = { ...newInputData, __refCount: 1 }
-      }
+      })
     })
   }
 
@@ -167,9 +177,14 @@ export const Store = function (this: StoreType) {
    * @param value new value of the input
    */
   this.setValueAtPath = (path, value, fromPanel) => {
-    const data = state.data
-    //@ts-expect-error (we always update inputs with a value)
-    updateInput(data[path], value, path, this, fromPanel)
+    // updateInput writes input.value AND input.fromPanel — without batch
+    // each fires its own subscriber wave. Drag pointermove calls this
+    // 60+ times/sec; halving the notification count via batch matters.
+    batch(() => {
+      const data = state.data
+      //@ts-expect-error (we always update inputs with a value)
+      updateInput(data[path], value, path, this, fromPanel)
+    })
   }
 
   this.setSettingsAtPath = (path, settings) => {
@@ -185,17 +200,19 @@ export const Store = function (this: StoreType) {
   }
 
   this.set = (values, fromPanel: boolean) => {
-    const data = state.data
-    Object.entries(values).forEach(([path, value]) => {
-      try {
-        //@ts-expect-error (we always update inputs with a value)
-        updateInput(data[path], value, undefined, undefined, fromPanel)
-      } catch (e) {
-        if ((typeof process !== 'undefined' && process.env?.NODE_ENV === 'development')) {
-          // eslint-disable-next-line no-console
-          console.warn(`[This message will only show in development]: \`set\` for path ${path} has failed.`, e)
+    batch(() => {
+      const data = state.data
+      Object.entries(values).forEach(([path, value]) => {
+        try {
+          //@ts-expect-error (we always update inputs with a value)
+          updateInput(data[path], value, undefined, undefined, fromPanel)
+        } catch (e) {
+          if ((typeof process !== 'undefined' && process.env?.NODE_ENV === 'development')) {
+            // eslint-disable-next-line no-console
+            console.warn(`[This message will only show in development]: \`set\` for path ${path} has failed.`, e)
+          }
         }
-      }
+      })
     })
   }
 
