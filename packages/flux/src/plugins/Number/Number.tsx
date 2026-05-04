@@ -53,22 +53,38 @@ export function Number({
   const InnerLabel: JSXChild = innerLabelTrim > 0 && (
     <DraggableLabel label={label} step={settings.step} onUpdate={onUpdate} innerLabelTrim={innerLabelTrim} />
   )
+  // displayValue may be a Signal/Computed (callable) or a plain value —
+  // wrap as a thunk so the input updates reactively during scrubbing
+  // and stringify only at read time. Without this, `String(signal)`
+  // would render the function source code into the input.
+  const valueThunk = () => {
+    const v = typeof displayValue === 'function' ? (displayValue as () => unknown)() : displayValue
+    return String(v ?? '')
+  }
   return (
-    <NumberInput id={id} value={String(displayValue)} onUpdate={onUpdate} onChange={onChange} innerLabel={InnerLabel} />
+    <NumberInput id={id} value={valueThunk as any} onUpdate={onUpdate} onChange={onChange} innerLabel={InnerLabel} />
   )
 }
 
 export function NumberComponent() {
   const { key: _key, ...props } = useInputContext<NumberProps>()
-  const { label, value, onUpdate, settings, id } = props
+  const { label, displayValue, onUpdate, settings, id } = props
   const { min, max } = settings
   const hasRange = max !== Infinity && min !== -Infinity
+
+  // Pass a reactive accessor for the slider position. displayValue is
+  // the live Signal/Computed from useInputSetters; reading it inside
+  // the thunk lets the scrubber follow the drag in real time.
+  const liveValue = () => {
+    const v = typeof displayValue === 'function' ? (displayValue as () => unknown)() : displayValue
+    return parseFloat(v as any)
+  }
 
   return (
     <Row input>
       <Label>{label}</Label>
       <RangeGrid hasRange={hasRange}>
-        {hasRange && <RangeSlider value={parseFloat(value as any)} onDrag={onUpdate} {...settings} />}
+        {hasRange && <RangeSlider value={liveValue} onDrag={onUpdate} {...settings} />}
         <Number {...props} id={id} label="value" innerLabelTrim={hasRange ? 0 : 1} />
       </RangeGrid>
     </Row>

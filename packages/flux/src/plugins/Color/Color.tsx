@@ -13,6 +13,13 @@ function convertToRgb(value: ColorType, _format: string) {
   return colord(value).toRgb()
 }
 
+// displayValue may be a Signal/Computed (callable) or a plain value —
+// resolve to the underlying string for read-time use.
+const readDisplay = (v: unknown): string => {
+  const x = typeof v === 'function' ? (v as () => unknown)() : v
+  return String(x ?? '')
+}
+
 export function Color({
   value,
   displayValue,
@@ -51,7 +58,7 @@ export function Color({
 
   return (
     <>
-      <ColorPreview innerRef={popinRef} active={() => shown()} onClick={() => showPicker()} style={{ color: displayValue as string }} />
+      <ColorPreview innerRef={popinRef} active={() => shown()} onClick={() => showPicker()} style={() => ({ color: readDisplay(displayValue) })} />
       {() =>
         shown() && (
           <Portal>
@@ -77,7 +84,7 @@ export function ColorComponent() {
       <Label>{label}</Label>
       <PickerContainer>
         <Color value={value} displayValue={displayValue} onChange={onChange} onUpdate={onUpdate} settings={settings} />
-        <ValueInput value={displayValue as string} onChange={onChange} onUpdate={onUpdate} />
+        <ValueInput value={() => readDisplay(displayValue)} onChange={onChange} onUpdate={onUpdate} />
       </PickerContainer>
     </Row>
   )

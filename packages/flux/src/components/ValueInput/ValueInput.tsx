@@ -7,7 +7,11 @@ import type { JSXChild } from '@madenowhere/phaze'
 
 export type ValueInputProps = {
   id?: string
-  value: string
+  // Phaze migration: value may be a plain string (back-compat) or a
+  // thunk that returns the current display value. Thunks let phaze
+  // track display-value signals through the chain so the input updates
+  // reactively as the user scrubs.
+  value: string | (() => string)
   innerLabel?: false | JSXChild
   type?: 'number'
   inputType?: string

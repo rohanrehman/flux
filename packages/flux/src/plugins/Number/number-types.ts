@@ -12,4 +12,7 @@ export type NumberInput = InputWithSettings<number | string, NumberSettings>
 
 export type NumberProps = FluxInputProps<number, InternalNumberSettings>
 
-export type RangeSliderProps = { value: number; onDrag: (v: number) => void } & InternalNumberSettings
+// `value` may be a plain number (back-compat) or a thunk — phaze
+// callers pass a thunk so the scrubber tracks store updates during
+// drag. RangeSlider unwraps via typeof check.
+export type RangeSliderProps = { value: number | (() => number); onDrag: (v: number) => void } & InternalNumberSettings
