@@ -32,8 +32,21 @@ export function Control({ path, store }: ControlProps) {
   const input = untrack(() => inputSignal())
   if (!input) return null
 
-  const { type, label, key, ...inputProps } = input
+  const { type, label, key, render, ...inputProps } = input
 
+  // Render-fn-driven visibility (input-level). Mirrors the per-Folder
+  // pattern in Folder.tsx — the Control stays in the tree (so we don't
+  // <For>-reconcile siblings on every render-fn dep change), but its
+  // `display` flips reactively. `store.get` inside the thunk tracks the
+  // controlling input's value signal so toggling visibility is instant.
+  // `display: contents` keeps the wrapper layout-transparent — the
+  // <ControlInput>/<SpecialInput> shows up as a direct grid item of
+  // the surrounding `.flux-folder-content`, just like before.
+  const displayStyle = render
+    ? () => ({ display: (render as any)(store.get) ? 'contents' : 'none' })
+    : undefined
+
+  let inner: any
   if (type in SpecialInputs) {
     // SpecialInput components have heterogeneous prop shapes (Button,
     // ButtonGroup, Monitor) that all share `label` + `path` plus their
@@ -41,30 +54,35 @@ export function Control({ path, store }: ControlProps) {
     // `type` resolves to one concrete component but TS can't narrow the
     // union, so the JSX call site widens via `as any`.
     const SpecialInputForType = specialComponents[type as keyof typeof specialComponents] as any
-    return <SpecialInputForType label={label} path={path} store={store} {...inputProps} />
-  }
-
-  if (!(type in Plugins)) {
+    inner = <SpecialInputForType label={label} path={path} store={store} {...inputProps} />
+  } else if (!(type in Plugins)) {
     log(FluxErrors.UNSUPPORTED_INPUT, type, path)
     return null
+  } else {
+    inner = (
+      // @ts-expect-error
+      <ControlInput
+        key={storeId + path}
+        type={type}
+        label={label}
+        storeId={storeId}
+        path={path}
+        valueKey={key}
+        setValue={set}
+        setSettings={setSettings}
+        disable={disable}
+        emitOnEditStart={emitOnEditStart}
+        emitOnEditEnd={emitOnEditEnd}
+        store={store}
+        {...inputProps}
+      />
+    )
   }
 
-  return (
-    // @ts-expect-error
-    <ControlInput
-      key={storeId + path}
-      type={type}
-      label={label}
-      storeId={storeId}
-      path={path}
-      valueKey={key}
-      setValue={set}
-      setSettings={setSettings}
-      disable={disable}
-      emitOnEditStart={emitOnEditStart}
-      emitOnEditEnd={emitOnEditEnd}
-      store={store}
-      {...inputProps}
-    />
-  )
+  // No render fn → no wrapper, original behavior. With render fn → span
+  // with reactive display:contents/none gates visibility without affecting
+  // grid layout (display:contents makes the span layout-transparent).
+  return displayStyle
+    ? <span style={displayStyle as any}>{inner}</span>
+    : inner
 }

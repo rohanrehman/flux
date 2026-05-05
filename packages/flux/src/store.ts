@@ -1,5 +1,5 @@
 import { store } from '@madenowhere/phaze/store'
-import { untrack, batch } from '@madenowhere/phaze'
+import { untrack, batch, computed } from '@madenowhere/phaze'
 import { updateInput, warn, FluxErrors, getUid, getDataFromSchema } from './utils'
 import { SpecialInputs, MappedPaths, DataInput } from './types'
 import type { FolderSettings, State, StoreType } from './types'
@@ -42,24 +42,23 @@ export const Store = function (this: StoreType) {
     const data = this.getData()
     const visiblePaths: string[] = []
     orderedPaths.forEach((path) => {
-      if (
-        path in data &&
-        // input is mounted
-        data[path].__refCount > 0 &&
-        // input-level render fn — untracked here so per-input render
-        // changes don't rebuild the panel; folder-level render fns are
-        // gated reactively at the <Folder> level via CSS display, see
-        // Folder.tsx. (Per-input visibility currently mirrors that at the
-        // panel level via untrack — no consumer in the active schema
-        // relies on input-level render reactivity yet.)
-        (!data[path].render || untrack(() => data[path].render!(this.get)))
-      ) {
+      if (path in data && data[path].__refCount > 0) {
+        // Input-level render fns no longer filter here — they gate
+        // visibility reactively at the <Control> level (display:none
+        // thunk), same pattern as folder-level render. That keeps the
+        // panel structure stable on render-fn dep changes (no re-mount,
+        // no <For> reconcile churn) and removes the last untrack().
         visiblePaths.push(path)
       }
     })
-
     return visiblePaths
   }
+
+  // Reactive visible-paths accessor. `getVisiblePaths()` reads tracked
+  // signals on `state.data` (Object.keys via the data proxy + per-input
+  // __refCount). Wrapping in computed() memoizes — consumers reading
+  // `visiblePaths()` inside a phaze scope auto-subscribe.
+  this.visiblePaths = computed(() => this.getVisiblePaths())
 
   // adds paths to OrderedPaths
   this.setOrderedPaths = (newPaths) => {

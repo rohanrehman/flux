@@ -7,7 +7,6 @@
 
 import { computed, untrack, type Computed } from '@madenowhere/phaze'
 import { fluxStore } from '../store'
-import { useVisiblePaths } from '../hooks/useVisiblePaths'
 import { buildTree } from '../components/Flux/tree'
 import { controlAccessor, type ControlAccessor } from '../control-accessor'
 import type { StoreType, DataInput, Tree, Data, DataItem } from '../types/internal'
@@ -42,10 +41,9 @@ const getInputAtPath = (data: Data, path: string): Input | null => {
 export function useFluxInputs(
   store: StoreType = fluxStore
 ): Computed<{ path: string; input: DataInput }[]> {
-  const paths = useVisiblePaths(store)
   return computed(() => {
     const data = store.state.data
-    return paths().map((path) => ({ path, input: data[path] as DataInput }))
+    return store.visiblePaths().map((path) => ({ path, input: data[path] as DataInput }))
   })
 }
 
@@ -57,8 +55,7 @@ export function useFluxTree(
   store: StoreType = fluxStore,
   filter?: string
 ): Computed<Tree> {
-  const paths = useVisiblePaths(store)
-  return computed(() => buildTree(paths(), filter))
+  return computed(() => buildTree(store.visiblePaths(), filter))
 }
 
 /**

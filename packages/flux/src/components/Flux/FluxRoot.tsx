@@ -4,7 +4,7 @@ import type { JSXChild } from '@madenowhere/phaze'
 import { buildTree } from './tree'
 import { TreeWrapper } from '../Folder'
 
-import { useTransform, useVisiblePaths } from '../../hooks'
+import { useTransform } from '../../hooks'
 
 import { StyledRoot } from './StyledRoot'
 import { mergeTheme, FluxCustomTheme } from '../../styles'
@@ -163,7 +163,7 @@ function FluxCore({
     setActivePanelSettings({ hideCopyButton })
   })
 
-  const paths = useVisiblePaths(store)
+  const paths = store.visiblePaths
   const filter = signal('')
   const tree = computed(() => buildTree(paths(), filter()))
 

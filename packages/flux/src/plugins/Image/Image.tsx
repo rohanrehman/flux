@@ -1,5 +1,6 @@
 /** @jsxImportSource @madenowhere/phaze */
-import { Label, Portal, Overlay, Row } from '../../components/UI'
+import { Label, Overlay, Row } from '../../components/UI'
+import { Portal } from '../../components/UI/Portal'
 import { useDropzone } from './useDropzone'
 import { DropZone, ImageContainer, ImagePreview, Instructions, ImageLargePreview, Remove } from './StyledImage'
 import { useInputContext } from '../../context'

@@ -28,6 +28,12 @@ export type StoreType = {
   disposePaths: (paths: string[]) => void
   dispose: () => void
   getVisiblePaths: () => string[]
+  /**
+   * Reactive accessor for the visible paths set — tracks adds/removes
+   * via the underlying `getVisiblePaths()` signal reads. Replaces the
+   * separate `useVisiblePaths` hook; consumers do `store.visiblePaths()`.
+   */
+  visiblePaths: () => string[]
   getFolderSettings: (path: string) => FolderSettings
   getData: () => Data
   addData: (newData: Data, override: boolean) => void

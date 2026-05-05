@@ -1,16 +1,6 @@
 /** @jsxImportSource @madenowhere/phaze */
-import { Portal as PhazePortal } from '@madenowhere/phaze/portal'
-import { useThemeContext } from '../../context'
-import type { JSXChild } from '@madenowhere/phaze'
+// Misc-the-old-file is now just a re-export of Overlay for back-compat.
+// Portal moved out to `./Portal.tsx` so `@madenowhere/phaze/portal` is
+// only imported when color/joystick/image plugins actually pull it in,
+// rather than via the UI barrel.
 export { Overlay } from './StyledUI'
-
-export function Portal({ children, container = globalThis?.document?.body }: { children?: JSXChild; container?: Element | null }) {
-  const { style } = useThemeContext()
-  const className = (style as any)?.['--flux-class'] ?? ''
-  if (!container) return null
-  return (
-    <PhazePortal mount={container}>
-      <div class={className}>{children}</div>
-    </PhazePortal>
-  )
-}

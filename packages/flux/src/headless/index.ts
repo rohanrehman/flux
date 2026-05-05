@@ -15,8 +15,10 @@ export { fluxStore, createStore } from '../store'
 
 // Hooks for accessing store data
 export { useInput } from '../hooks/useInput'
-export { useVisiblePaths } from '../hooks/useVisiblePaths'
 export { useValuesForPath } from '../hooks/useValuesForPath'
+// `useVisiblePaths(store)` was removed in stage 5 — use `store.visiblePaths`
+// directly. It's a phaze Computed<string[]>; call `store.visiblePaths()` to
+// read inside an effect / computed / JSX expression.
 
 // Store accessors. Phaze migration drops FluxStoreProvider — use
 // setActiveStore() before mounting your panel root if you need a scoped

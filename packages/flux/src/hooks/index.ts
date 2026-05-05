@@ -13,7 +13,7 @@ export * from './useCanvas'
 // INTERNAL - Store Subscriptions
 // ============================================
 export * from './useValuesForPath'
-export * from './useVisiblePaths'
+// `useVisiblePaths` removed — use `store.visiblePaths()` directly.
 
 // ============================================
 // INTERNAL - UI/Animation Utilities
