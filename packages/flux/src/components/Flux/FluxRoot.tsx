@@ -1,5 +1,5 @@
 /** @jsxImportSource @madenowhere/phaze */
-import { signal, effect, cleanup, computed, untrack } from '@madenowhere/phaze'
+import { signal, effect, cleanup, computed } from '@madenowhere/phaze'
 import type { JSXChild } from '@madenowhere/phaze'
 import { buildTree } from './tree'
 import { TreeWrapper } from '../Folder'
@@ -213,18 +213,17 @@ function FluxCore({
         />
       )}
       {() => {
-        // Track shouldShow() only. tree() is read untracked — folder /
-        // input render fns gate their own visibility via display:none at
-        // the Folder level (see Folder.tsx), so we don't need to rebuild
-        // the entire TreeWrapper when a render-fn dep changes. The full
-        // rebuild path was visibly slow on toggles like useSlots.
+        // Outer thunk only depends on shouldShow (path count crossing 0).
+        // The inner TreeWrapper receives `tree` as a thunk so its <For>
+        // reconciles paths incrementally as useControls calls add/remove
+        // them — no full panel rebuild on tree shape change.
         if (!shouldShow()) return null
         return (
           <TreeWrapper
             isRoot
             fill={fill}
             flat={flat}
-            tree={untrack(() => tree())}
+            tree={tree}
             toggled={toggled}
             store={store}
           />
