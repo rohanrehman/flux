@@ -17,10 +17,18 @@ import type { SpringProps } from './spring-types'
 export function SpringCanvas() {
   const { displayValue, value, onUpdate, settings } = useInputContext<SpringProps>()
 
-  // Spring state captured as a plain mutable bag — the drag handler and
-  // the redraw callback both read from this so they always see the
-  // latest displayValue without needing a useRef indirection.
-  const current = { ...displayValue }
+  // displayValue / value may be phaze Signals (callable) or plain
+  // objects depending on how the plugin is consumed. Resolve both
+  // defensively so the drag handler and redraw callback always see
+  // current numbers, not function refs.
+  const readDisplay = (): any =>
+    typeof displayValue === 'function' ? (displayValue as () => any)() : displayValue
+  const readValue = (): any =>
+    typeof value === 'function' ? (value as () => any)() : value
+
+  // Mutable bag mirrored from displayValue; refreshed inside the effect
+  // below so drag/redraw always read current numbers.
+  const current: any = { ...readDisplay() }
 
   const accentColor = useTh('colors', 'highlight4')
   const backgroundColor = useTh('colors', 'elevation2')
@@ -45,7 +53,7 @@ export function SpringCanvas() {
       memo = [current.tension, current.friction],
     } = state
     onUpdate({
-      ...value,
+      ...readValue(),
       tension: memo[0] - Math.round(x) * ts.step,
       friction: memo[1] - Math.round(y / 4) * fs.step,
     })
@@ -101,9 +109,10 @@ export function SpringCanvas() {
   // Whenever displayValue (and therefore the spring config) changes, sync
   // the local state, redraw the static curve, and kick the preview.
   effect(() => {
-    current.tension = displayValue.tension
-    current.friction = displayValue.friction
-    current.mass = displayValue.mass
+    const dv = readDisplay()
+    current.tension = dv.tension
+    current.friction = dv.friction
+    current.mass = dv.mass
     const c = canvas()
     const c2d = ctx()
     if (c && c2d) drawSpring(c, c2d)

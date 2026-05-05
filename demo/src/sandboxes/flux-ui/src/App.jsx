@@ -52,7 +52,7 @@ function makeDropzone({ onDrop } = {}) {
 function Box({ index, selected, setSelect }) {
   const store = createStore()
 
-  const [box, set] = useControls(
+  const box = useControls(
     () => ({
       position: {
         value: [window.innerWidth / 2 - 150, window.innerHeight / 2],
@@ -74,6 +74,7 @@ function Box({ index, selected, setSelect }) {
     }),
     { store }
   )
+  const set = (next) => box.set(next)
 
   const bind = makeDrag(({ first, movement: [x, y], args: controls, memo }) => {
     const current = box()

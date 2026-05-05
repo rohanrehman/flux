@@ -2,112 +2,93 @@ import { effect, untrack, cleanup, type Computed } from '@madenowhere/phaze'
 import { fluxStore } from './store'
 import { folder } from './helpers'
 import { useValuesForPath } from './hooks'
+import { controlAccessor, type ControlAccessor } from './control-accessor'
 import type { FolderSettings, Schema, SchemaToValues, StoreType, OnChangeHandler } from './types'
-
-// Preact-era `Inputs` type, inlined so we don't reach into preact/hooks.
-// Deps are accepted for API parity with the preact version but are not
-// used for re-running schema in phaze — reactivity handles dep changes
-// via signal reads inside the schema function.
-type Inputs = readonly unknown[] | undefined
 
 export type HookSettings = { store?: StoreType; headless?: boolean }
 export type SchemaOrFn<S extends Schema = Schema> = S | (() => S)
 
-type FunctionReturnType<S extends Schema> = [
-  Computed<SchemaToValues<S>>,
-  (value: {
-    [K in keyof Partial<SchemaToValues<S, true>>]: SchemaToValues<S, true>[K]
-  }) => void,
-  <T extends keyof SchemaToValues<S, true>>(path: T) => SchemaToValues<S, true>[T]
-]
-
-type ReturnType<F extends SchemaOrFn> = F extends SchemaOrFn<infer S>
-  ? F extends Function
-    ? FunctionReturnType<S>
-    : Computed<SchemaToValues<S>>
-  : never
-
-export type HookReturnType<F extends SchemaOrFn | string, G extends SchemaOrFn> = F extends SchemaOrFn
-  ? ReturnType<F>
-  : ReturnType<G>
+/**
+ * Phaze-native return shape from `useControls`.
+ *
+ * - **Callable** (`flux()`) — flat snapshot Computed of every input value.
+ *   Use inside JSX thunks for displaying current state, JSON dumps, etc.
+ * - **Per-key access** (`flux.fov`, `flux.color`) — phaze-Signal-shaped
+ *   accessor for one input. Both fabric (`subscribeToSignals`) and photon
+ *   (`animate` target detection) duck-type on `.set + .subscribe`, so
+ *   passing `flux.fov` directly to either Just Works.
+ * - **Computed members** (`flux.subscribe`, `flux.current`) — inherited
+ *   from the snapshot Computed.
+ * - **Batch helpers** (`flux.set({...})`, `flux.get('fov')`) — bulk write
+ *   and imperative read. User input keys take precedence over these
+ *   names if they collide; pick another helper name (e.g. dedicated
+ *   `flux[FluxOps]`) if you must use `set`/`get` as input keys.
+ */
+export type ControlsHandle<V extends Record<string, any> = Record<string, any>> = Computed<V> & {
+  set: (next: Partial<V>) => void
+  get: <K extends keyof V>(key: K) => V[K]
+} & {
+  [K in keyof V as K extends 'set' | 'get' | 'current' | 'subscribe' | 'name' ? never : K]: ControlAccessor<V[K]>
+}
 
 export function parseArgs(
   schemaOrFolderName: string | SchemaOrFn,
-  settingsOrDepsOrSchema?: HookSettings | Inputs | SchemaOrFn,
-  depsOrSettingsOrFolderSettings?: Inputs | HookSettings | FolderSettings,
-  depsOrSettings?: Inputs | HookSettings,
-  depsOrUndefined?: Inputs
+  settingsOrSchema?: HookSettings | SchemaOrFn,
+  folderSettingsOrSettings?: HookSettings | FolderSettings
 ) {
   let schema: SchemaOrFn
   let folderName: string | undefined = undefined
   let folderSettings: FolderSettings | undefined
   let hookSettings: HookSettings | undefined
-  let deps: Inputs | undefined
 
   if (typeof schemaOrFolderName === 'string') {
     folderName = schemaOrFolderName
-    schema = settingsOrDepsOrSchema as SchemaOrFn
-    if (Array.isArray(depsOrSettingsOrFolderSettings)) {
-      deps = depsOrSettingsOrFolderSettings
-    } else {
-      if (depsOrSettingsOrFolderSettings) {
-        if ('store' in depsOrSettingsOrFolderSettings) {
-          hookSettings = depsOrSettingsOrFolderSettings as HookSettings
-          deps = depsOrSettings as Inputs
-        } else {
-          folderSettings = depsOrSettingsOrFolderSettings as FolderSettings
-          if (Array.isArray(depsOrSettings)) {
-            deps = depsOrSettings as Inputs
-          } else {
-            hookSettings = depsOrSettings as HookSettings
-            deps = depsOrUndefined
-          }
-        }
+    schema = settingsOrSchema as SchemaOrFn
+    if (folderSettingsOrSettings) {
+      if ('store' in folderSettingsOrSettings) {
+        hookSettings = folderSettingsOrSettings as HookSettings
+      } else {
+        folderSettings = folderSettingsOrSettings as FolderSettings
       }
     }
   } else {
     schema = schemaOrFolderName as SchemaOrFn
-    if (Array.isArray(settingsOrDepsOrSchema)) {
-      deps = settingsOrDepsOrSchema as Inputs
-    } else {
-      hookSettings = settingsOrDepsOrSchema as HookSettings
-      deps = depsOrSettingsOrFolderSettings as Inputs
-    }
+    hookSettings = settingsOrSchema as HookSettings
   }
 
-  return { schema, folderName, folderSettings, hookSettings, deps: deps || [] }
+  return { schema, folderName, folderSettings, hookSettings }
 }
 
 /**
- * Phaze-native `useControls`. Component bodies in phaze run once, so this
- * hook's setup work is synchronous: parse the schema, register data,
- * wire subscriptions, return reactive accessors. Cleanup parents to the
+ * Phaze-native `useControls`. Component bodies in phaze run once, so the
+ * setup work is synchronous: parse the schema, register data, wire
+ * subscriptions, return a reactive handle. Cleanup parents to the
  * caller's component scope via `effect()` + `cleanup()`.
  *
- * Signature is unchanged for static schemas. Function schemas now return
- * `[Computed<values>, set, get]` instead of `[values, set, get]`.
- *
- * @param schemaOrFolderName
- * @param settingsOrDepsOrSchema
- * @param folderSettingsOrDeps
- * @param depsOrUndefined
+ * The returned handle is callable (snapshot read), exposes per-key signal
+ * accessors via property access, and has `.set`/`.get` batch methods. See
+ * `ControlsHandle` for details. Function-schema and static-schema forms
+ * return the *same* shape — the preact-era `[values, set, get]` tuple is
+ * gone; callers use `handle.set(...)` and `handle.get(...)` directly.
  */
+type ResolveHandle<F, G> = F extends SchemaOrFn<infer S>
+  ? ControlsHandle<SchemaToValues<S> & Record<string, any>>
+  : G extends SchemaOrFn<infer S2>
+  ? ControlsHandle<SchemaToValues<S2> & Record<string, any>>
+  : never
+
 export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, G extends SchemaOrFn<S>>(
   schemaOrFolderName: F,
-  settingsOrDepsOrSchema?: HookSettings | Inputs | G,
-  depsOrSettingsOrFolderSettings?: Inputs | HookSettings | FolderSettings,
-  depsOrSettings?: Inputs | HookSettings,
-  depsOrUndefined?: Inputs
-): HookReturnType<F, G> {
-  const { folderName, schema, folderSettings, hookSettings } = parseArgs(
-    schemaOrFolderName,
-    settingsOrDepsOrSchema,
-    depsOrSettingsOrFolderSettings,
-    depsOrSettings,
-    depsOrUndefined
+  settingsOrSchema?: HookSettings | G,
+  folderSettingsOrSettings?: HookSettings | FolderSettings,
+  trailingSettings?: HookSettings
+): ResolveHandle<F, G> {
+  const { folderName, schema, folderSettings, hookSettings: parsedSettings } = parseArgs(
+    schemaOrFolderName as string | SchemaOrFn,
+    settingsOrSchema as HookSettings | SchemaOrFn | undefined,
+    folderSettingsOrSettings
   )
-
-  const schemaIsFunction = typeof schema === 'function'
+  const hookSettings = parsedSettings ?? trailingSettings
 
   const rawSchema = typeof schema === 'function' ? (schema as () => Schema)() : schema
   const _schema = folderName ? { [folderName]: folder(rawSchema, folderSettings) } : rawSchema
@@ -118,10 +99,8 @@ export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, 
   // fire twice. Users now render <Flux> (or <FluxPanel>) explicitly.
   const store = hookSettings?.store || fluxStore
 
-  /**
-   * Parses the schema to extract the inputs initial data. Recursively
-   * flattens nested folders.
-   */
+  // Parses the schema to extract the inputs initial data. Recursively
+  // flattens nested folders.
   const [initialData, mappedPaths] = store.getDataFromSchema(_schema)
 
   const allPaths: string[] = []
@@ -145,10 +124,8 @@ export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, 
   // Extracts the paths from the initialData and ensures order of paths.
   const paths = store.orderPaths(allPaths)
 
-  /**
-   * Reactive flattened values. Reading inside JSX or another reactive
-   * scope subscribes only to the requested paths.
-   */
+  // Reactive flattened values. Reading inside JSX or another reactive
+  // scope subscribes only to the requested paths.
   const values = useValuesForPath(store, renderPaths, initialData)
 
   // Initialize the store with initial data and arrange disposal on
@@ -196,16 +173,52 @@ export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, 
     })
   })
 
-  const set = (next: Record<string, any>) => {
-    const _values = Object.entries(next).reduce(
-      (acc, [p, v]) => Object.assign(acc, { [mappedPaths[p].path]: v }),
-      {}
-    )
-    store.set(_values, false)
+  const setMany = (next: Record<string, unknown>) => {
+    const fullPaths: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(next)) {
+      const m = mappedPaths[k]
+      if (m) fullPaths[m.path] = v
+    }
+    store.set(fullPaths, false)
   }
 
-  const get = (path: string) => store.get(mappedPaths[path].path)
+  const getOne = (key: string) => {
+    const m = mappedPaths[key]
+    return m ? store.get(m.path) : undefined
+  }
 
-  if (schemaIsFunction) return [values, set, get] as HookReturnType<F, G>
-  return values as HookReturnType<F, G>
+  // Cache per-key accessors so repeated `flux.fov` reads return the same
+  // object identity (lets consumers compare references / use as effect
+  // deps). Cleared via cleanup if needed; for now they live as long as
+  // the panel mount.
+  const accessorCache = new Map<string, ControlAccessor<unknown>>()
+
+  // Reflect.get fall-throughs land on `values` (a Computed), so callers
+  // get `.subscribe`/`.current` from the underlying Computed without us
+  // re-implementing them.
+  return new Proxy(values as any, {
+    apply: (_target, _this, _args) => values(),
+    get: (target, prop, receiver) => {
+      // Symbols and well-known JS internals route to the underlying
+      // Computed (instanceof checks, iterators, etc.).
+      if (typeof prop === 'symbol') return Reflect.get(target, prop, receiver)
+
+      // User input keys take precedence — if a schema names a key `set`
+      // or `get`, the user's accessor is what they want. Helper methods
+      // are below.
+      if (mappedPaths[prop]) {
+        let acc = accessorCache.get(prop)
+        if (!acc) {
+          acc = controlAccessor(store, mappedPaths[prop].path)
+          accessorCache.set(prop, acc)
+        }
+        return acc
+      }
+
+      if (prop === 'set') return setMany
+      if (prop === 'get') return getOne
+
+      return Reflect.get(target, prop, receiver)
+    },
+  }) as ResolveHandle<F, G>
 }

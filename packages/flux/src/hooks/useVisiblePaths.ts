@@ -8,8 +8,10 @@ import type { StoreType } from '../types'
  *
  * `getVisiblePaths()` reads `store.state.data` internally, so the
  * computed re-runs whenever paths are added, removed, or have their
- * `__refCount`/`render`/folder visibility flip. Read `paths()` inside a
- * reactive scope to track.
+ * `__refCount` flip. Folder visibility (render-fn-driven show/hide) is
+ * NOT tracked here — that gate lives at the Folder level (see Folder.tsx)
+ * via display:none, which avoids rebuilding the whole panel on every
+ * render-fn dep change.
  */
 export const useVisiblePaths = (store: StoreType): Computed<string[]> => {
   return computed(() => store.getVisiblePaths())

@@ -52,7 +52,7 @@ export function useInputSetters<V, Settings extends object>({
     } catch (error: any) {
       const { type: errType, previousValue: prev } = error
       // make sure we throw an error if it's not a sanitization error
-      if (errType !== 'LEVA_ERROR') throw error
+      if (errType !== 'FLUX_ERROR') throw error
       setFormat(prev)
     }
   }

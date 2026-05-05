@@ -6,10 +6,10 @@ import { Plugins } from '../../plugin'
 import { Button } from '../Button'
 import { ButtonGroup } from '../ButtonGroup'
 import { Monitor } from '../Monitor'
-import { useInput } from '../../hooks'
-import { SpecialInputs } from '../../types'
+import { useInputForStore } from '../../hooks/useInput'
+import { SpecialInputs, type StoreType } from '../../types'
 
-type ControlProps = { path: string }
+type ControlProps = { path: string; store: StoreType }
 
 const specialComponents = {
   [SpecialInputs.BUTTON]: Button,
@@ -17,8 +17,8 @@ const specialComponents = {
   [SpecialInputs.MONITOR]: Monitor,
 }
 
-export function Control({ path }: ControlProps) {
-  const [inputSignal, { set, setSettings, disable, storeId, emitOnEditStart, emitOnEditEnd }] = useInput(path)
+export function Control({ path, store }: ControlProps) {
+  const [inputSignal, { set, setSettings, disable, storeId, emitOnEditStart, emitOnEditEnd }] = useInputForStore(store, path)
   // Snapshot at row mount — type/key/label don't change after the input
   // is registered. Crucially: read inside untrack() so the parent thunk
   // (FluxCore's TreeWrapper renderer) doesn't subscribe to the input's
@@ -35,9 +35,13 @@ export function Control({ path }: ControlProps) {
   const { type, label, key, ...inputProps } = input
 
   if (type in SpecialInputs) {
-    // @ts-expect-error
-    const SpecialInputForType = specialComponents[type]
-    return <SpecialInputForType label={label} path={path} {...inputProps} />
+    // SpecialInput components have heterogeneous prop shapes (Button,
+    // ButtonGroup, Monitor) that all share `label` + `path` plus their
+    // own extras spread through `inputProps`. The keyed dispatch on
+    // `type` resolves to one concrete component but TS can't narrow the
+    // union, so the JSX call site widens via `as any`.
+    const SpecialInputForType = specialComponents[type as keyof typeof specialComponents] as any
+    return <SpecialInputForType label={label} path={path} store={store} {...inputProps} />
   }
 
   if (!(type in Plugins)) {
@@ -59,6 +63,7 @@ export function Control({ path }: ControlProps) {
       disable={disable}
       emitOnEditStart={emitOnEditStart}
       emitOnEditEnd={emitOnEditEnd}
+      store={store}
       {...inputProps}
     />
   )

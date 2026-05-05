@@ -96,8 +96,20 @@ export function Joystick({ value, settings, onUpdate }: JoystickProps) {
     })
   })
 
-  const bind = useDrag(({ first, active, delta: [dx, dy], movement: [mx, my] }) => {
-    if (first) joystickShown.set(true)
+  // value may be a phaze Signal/Computed (callable). Snapshot once at
+  // drag start into memo and accumulate via deltas — avoids reading the
+  // signal on every pointermove (which was a no-op before, but reading
+  // it now lands a fresh subscription path each tick that interacts
+  // badly with the playground's Portal teardown).
+  const readValue = (): any =>
+    typeof value === 'function' ? (value as () => any)() : value
+
+  const bind = useDrag(({ first, active, delta: [dx, dy], movement: [mx, my], memo }) => {
+    if (first) {
+      joystickShown.set(true)
+      const v = readValue()
+      memo = { x: v[v1] as number, y: v[v2] as number }
+    }
 
     const _x = clamp(mx, -w, w)
     const _y = clamp(my, -h, h)
@@ -105,24 +117,19 @@ export function Joystick({ value, settings, onUpdate }: JoystickProps) {
     outOfBoundsX = Math.abs(mx) > Math.abs(_x) ? Math.sign(mx - _x) : 0
     outOfBoundsY = Math.abs(my) > Math.abs(_y) ? Math.sign(_y - my) : 0
 
-    // @ts-expect-error
-    let newX = value[v1]
-    // @ts-expect-error
-    let newY = value[v2]
-
     if (active) {
       if (!outOfBoundsX) {
-        newX += dx * stepV1 * stepMultiplier
+        memo.x += dx * stepV1 * stepMultiplier
         set({ x: _x })
       }
       if (!outOfBoundsY) {
-        newY -= yFactor * dy * stepV2 * stepMultiplier
+        memo.y -= yFactor * dy * stepV2 * stepMultiplier
         set({ y: _y })
       }
       if (outOfBoundsX || outOfBoundsY) startOutOfBounds()
       else endOutOfBounds()
 
-      onUpdate({ [v1]: newX, [v2]: newY })
+      onUpdate({ [v1]: memo.x, [v2]: memo.y })
     } else {
       joystickShown.set(false)
       outOfBoundsX = 0
@@ -130,6 +137,7 @@ export function Joystick({ value, settings, onUpdate }: JoystickProps) {
       set({ x: 0, y: 0 })
       endOutOfBounds()
     }
+    return memo
   })
 
   return (
@@ -137,7 +145,12 @@ export function Joystick({ value, settings, onUpdate }: JoystickProps) {
       {() =>
         joystickShown() && (
           <Portal>
-            <JoystickPlayground innerRef={playgroundRef} isOutOfBounds={isOutOfBounds()}>
+            {/* Pass the signal as a thunk — JoystickPlayground binds it
+                reactively in its class attribute. Reading isOutOfBounds()
+                directly here would subscribe THIS thunk, causing the
+                Portal to tear down + remount on every out-of-bounds
+                flip mid-drag. */}
+            <JoystickPlayground innerRef={playgroundRef} isOutOfBounds={isOutOfBounds}>
               <div />
               <span ref={spanRef as any} />
             </JoystickPlayground>

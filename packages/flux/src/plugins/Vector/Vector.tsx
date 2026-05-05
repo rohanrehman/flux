@@ -18,24 +18,41 @@ function Coordinate<T extends Record<string, number>>({
   onUpdate,
   innerLabelTrim,
 }: CoordinateProps<T>) {
+  // `value` may be a phaze-Signal/Computed (callable getter) or a plain
+  // object — Vector2dComponent passes the displayValue signal down, but
+  // direct callers (custom UIs, plugin development) may pass a plain
+  // object. Read defensively each call.
+  const resolveBag = () => (typeof value === 'function' ? (value as () => T)() : value)
+  const readNum = () => resolveBag()[valueKey]
+
   // Phaze migration: useRef → plain mutable local. Components run once,
-  // so closure over `value[valueKey]` would freeze; we read fresh on each
-  // setValue invocation (which is fired from event handlers, not from
-  // the render path).
-  let currentValue = value[valueKey]
-  currentValue = value[valueKey]
+  // so closure over `value[valueKey]` would freeze; readNum() picks up
+  // the fresh value at each setValue invocation (fired from event
+  // handlers, not the render path).
+  let currentValue = readNum()
 
-  const setValue = (newValue: any) =>
-    // @ts-expect-error
-    onUpdate({ [valueKey]: sanitizeValue({ type: 'NUMBER', value: currentValue, settings }, newValue) })
+  const setValue = (newValue: any) => {
+    currentValue = readNum()
+    // sanitizeValue's path/store args are only used for SELECT options
+    // — number inputs ignore them. Casting to silence the strict overload.
+    onUpdate({
+      [valueKey]: (sanitizeValue as any)({ type: 'NUMBER', value: currentValue, settings }, newValue),
+    } as any)
+  }
 
-  const number = useInputSetters({ type: 'NUMBER', value: value[valueKey], settings, setValue })
+  const number = useInputSetters({
+    type: 'NUMBER',
+    value: currentValue,
+    settings,
+    setValue,
+    valueGetter: readNum,
+  })
 
   return (
     <Number
       id={id}
       label={valueKey as string}
-      value={value[valueKey]}
+      value={readNum()}
       displayValue={number.displayValue() as any}
       onUpdate={number.onUpdate}
       onChange={number.onChange}
@@ -98,16 +115,26 @@ export function Vector<T extends Record<string, number>>({
   // TODO atm if lock is explicitly set in settings we show the lock, this can probably be improved with better logic.
   const { lock, locked } = settings
 
+  // Prefer settings.keys (canonical: ['x','y'] / ['x','y','z']) — works
+  // for both array-format and object-format vector inputs. Fallback to
+  // Object.keys on the resolved value bag for non-vector consumers like
+  // the Interval plugin which routes through Vector but has no `.keys`
+  // on its settings ({ min: NumberSettings, max: NumberSettings }).
+  const keys = ((settings as any).keys as string[] | undefined) ?? (() => {
+    const v = typeof value === 'function' ? (value as () => any)() : value
+    return v ? Object.keys(v) : []
+  })()
+
   return (
     <Container withLock={lock}>
       {lock && <Lock locked={locked!} onClick={() => setSettings({ locked: !locked })} />}
-      {Object.keys(value).map((key, i) => (
+      {keys.map((key, i) => (
         <Coordinate
           id={i === 0 ? id : `${id}.${key}`}
           key={key}
           valueKey={key}
           value={value}
-          settings={settings[key]}
+          settings={(settings as any)[key]}
           onUpdate={onUpdate}
           innerLabelTrim={innerLabelTrim}
         />

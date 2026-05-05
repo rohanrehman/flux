@@ -1,6 +1,6 @@
 import { computed, untrack, type Computed } from '@madenowhere/phaze'
 import { useStoreContext } from '../context'
-import type { Data, DataItem } from '../types'
+import type { Data, DataItem, StoreType } from '../types'
 
 // The spread `{ ...data[path] }` reads every property of the input proxy,
 // subscribing the calling computed to all of them — value, fromPanel,
@@ -35,21 +35,28 @@ type Input = Omit<DataItem, '__refCount'>
  * @returns `[inputSignal, methods]` — methods are stable for the
  *   component's lifetime; `inputSignal()` is the reactive read.
  */
-export function useInput(path: string): [
-  Computed<Input | null>,
-  {
-    set: (value: any) => void
-    setSettings: (value: any) => void
-    disable: (flag: boolean) => void
-    storeId: string
-    emitOnEditStart: () => void
-    emitOnEditEnd: () => void
-  }
-] {
-  const store = useStoreContext()
+type InputMethods = {
+  set: (value: any) => void
+  setSettings: (value: any) => void
+  disable: (flag: boolean) => void
+  storeId: string
+  emitOnEditStart: () => void
+  emitOnEditEnd: () => void
+}
 
+/**
+ * Store-explicit variant — internal use. Multi-panel apps can't safely
+ * route through `useStoreContext()` because the module-global currentStore
+ * races between concurrently-mounted panels (last setActiveStore wins; any
+ * later re-render of the first panel's subtree picks up the wrong store).
+ * The panel render tree threads `store` down via props and calls this
+ * directly. Callers outside that tree should keep using `useInput()`.
+ */
+export function useInputForStore(
+  store: StoreType,
+  path: string
+): [Computed<Input | null>, InputMethods] {
   const input = computed(() => getInputAtPath(store.state.data, path))
-
   return [
     input,
     {
@@ -61,4 +68,8 @@ export function useInput(path: string): [
       emitOnEditEnd: () => store.emitOnEditEnd(path),
     },
   ]
+}
+
+export function useInput(path: string): [Computed<Input | null>, InputMethods] {
+  return useInputForStore(useStoreContext(), path)
 }

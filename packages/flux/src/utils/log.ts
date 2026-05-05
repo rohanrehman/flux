@@ -42,7 +42,7 @@ function _log<T extends FluxErrors>(fn: 'log' | 'warn', errorType: T, ...args: a
   const errorFn = ErrorList[errorType] as (...args: any[]) => [string, ...unknown[]]
   const [message, ...rest] = errorFn(...args)
   // eslint-disable-next-line no-console
-  console[fn]('LEVA: ' + message, ...rest)
+  console[fn]('FLUX: ' + message, ...rest)
 }
 
 export const warn = _log.bind(null, 'warn') as <T extends FluxErrors>(errorType: T, ...args: any[]) => void

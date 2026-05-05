@@ -1,10 +1,10 @@
 /** @jsxImportSource @madenowhere/phaze */
 import { Plugins } from '../../plugin'
 import { warn, FluxErrors } from '../../utils/log'
-import { setCurrentInput, useStoreContext } from '../../context'
+import { setCurrentInput } from '../../context'
 import { useInputSetters } from '../../hooks'
 import { StyledInputWrapper } from '../UI/StyledUI'
-import type { DataInput } from '../../types'
+import type { DataInput, StoreType } from '../../types'
 
 type ControlInputProps = Omit<DataInput, '__refCount' | 'key'> & {
   valueKey: string
@@ -15,6 +15,10 @@ type ControlInputProps = Omit<DataInput, '__refCount' | 'key'> & {
   disable: (flag: boolean) => void
   emitOnEditStart?: (...args: any) => void
   emitOnEditEnd?: (...args: any) => void
+  // Threaded explicitly from Control → TreeWrapper → FluxCore. See
+  // hooks/useInput.ts for why we don't use the module-global
+  // useStoreContext() inside the panel render tree.
+  store: StoreType
 }
 
 export function ControlInput({
@@ -26,6 +30,7 @@ export function ControlInput({
   settings,
   setValue,
   disabled,
+  store,
   ...rest
 }: ControlInputProps) {
   // Reactive read of the live value at this path. Threaded into
@@ -33,7 +38,6 @@ export function ControlInput({
   // (drag, programmatic set, hot-reload). Without this, displayValue
   // captures `value` at mount and never refreshes — visible as a stuck
   // scrubber during slider drag.
-  const store = useStoreContext()
   const valueGetter = () => (store.state.data[path] as DataInput | undefined)?.value
   const { displayValue, onChange, onUpdate } = useInputSetters({ type, value, settings, setValue, valueGetter })
 

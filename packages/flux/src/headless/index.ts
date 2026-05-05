@@ -33,7 +33,11 @@ export * from '../helpers'
 export { createPlugin } from '../plugin'
 
 // Convenience hooks for easier headless usage
-export { useFluxInputs, useFluxTree, useFluxInput } from './hooks'
+export { useFluxInputs, useFluxTree, useFluxInput, useFluxValue } from './hooks'
+
+// Per-key signal-like accessor (callable read, .set, .subscribe).
+// Compatible with fabric & photon out of the box.
+export { controlAccessor, type ControlAccessor } from '../control-accessor'
 
 // Type exports for building custom UIs
 export type { StoreType, DataInput, DataItem, Data, Tree, MappedPaths } from '../types/internal'

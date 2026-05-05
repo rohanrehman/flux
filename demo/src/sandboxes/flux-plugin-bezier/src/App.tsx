@@ -1,4 +1,4 @@
-import { useControls } from 'flux'
+import { useControls, Flux } from 'flux'
 import { bezier } from '@flux-ui/plugin-bezier'
 import './style.css'
 
@@ -7,6 +7,7 @@ export default function App() {
 
   return (
     <div className="App">
+      <Flux titleBar={false} />
       <div
         className="bezier-animated"
         style={() => ({ animationTimingFunction: data().curve.cssEasing })}

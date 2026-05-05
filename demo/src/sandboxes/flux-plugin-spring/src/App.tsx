@@ -1,4 +1,4 @@
-import { useControls } from 'flux'
+import { useControls, Flux } from 'flux'
 import { spring } from '@flux-ui/plugin-spring'
 
 export default function App() {
@@ -8,6 +8,7 @@ export default function App() {
 
   return (
     <div className="App">
+      <Flux titleBar={false} />
       <pre>{() => JSON.stringify(data().mySpring, null, '  ')}</pre>
     </div>
   )

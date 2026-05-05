@@ -1,57 +1,56 @@
 /**
- * Headless version of useControls.
- * Automatically passes { headless: true } to prevent UI rendering.
+ * Headless version of useControls — same API as `useControls` from
+ * `'flux'`, with `{ headless: true }` injected into hookSettings so no
+ * Flux panel mounts. Returns the same `ControlsHandle` (callable
+ * snapshot, per-key signal accessors, batch set/get).
  */
 
-import {
-  useControls as useControlsBase,
-  parseArgs,
-  type HookSettings,
-  type SchemaOrFn,
-  type HookReturnType,
-} from '../useControls'
+import { useControls as useControlsBase, type HookSettings, type SchemaOrFn } from '../useControls'
 import type { Schema, FolderSettings } from '../types'
-import { reconstructArgsWithHeadless } from './useControls.utils'
 
-// Preact-era `Inputs` type, inlined for parity. Deps are accepted but
-// not used to re-run schema in phaze.
-type Inputs = readonly unknown[] | undefined
+const headless = (s?: HookSettings): HookSettings => ({ ...s, headless: true })
 
 /**
- * Headless `useControls` — manages state without rendering UI.
- *
- * Same surface as `useControls` from `'flux'`, with `{ headless: true }`
- * injected into hookSettings so no Flux panel mounts. Component bodies
- * in phaze run once, so the previous useMemo memoization for parseArgs /
- * arg reconstruction collapses to plain calls (Pattern 3).
- *
- * @see {@link https://github.com/rohanrehman/flux#headless-mode | Headless Mode Documentation}
- * @see useControls from 'flux' for full API documentation and examples.
+ * Headless `useControls` — returns the same `ControlsHandle` as
+ * `useControls` from `'flux'`, but injects `{ headless: true }` so no
+ * panel mounts. Same single-overload shape as the base hook so generic
+ * inference behaves identically.
  */
 export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, G extends SchemaOrFn<S>>(
   schemaOrFolderName: F,
-  settingsOrDepsOrSchema?: HookSettings | Inputs | G,
-  depsOrSettingsOrFolderSettings?: Inputs | HookSettings | FolderSettings,
-  depsOrSettings?: Inputs | HookSettings,
-  depsOrUndefined?: Inputs
-): HookReturnType<F, G> {
-  const { folderName, hookSettings } = parseArgs(
-    schemaOrFolderName,
-    settingsOrDepsOrSchema,
-    depsOrSettingsOrFolderSettings,
-    depsOrSettings,
-    depsOrUndefined
-  )
-
-  const modifiedArgs = reconstructArgsWithHeadless({
-    folderName,
-    schemaOrFolderName,
-    settingsOrDepsOrSchema,
-    depsOrSettingsOrFolderSettings,
-    depsOrSettings,
-    depsOrUndefined,
-    hookSettings,
-  }) as Parameters<typeof useControlsBase>
-
-  return useControlsBase(...modifiedArgs) as HookReturnType<F, G>
+  settingsOrSchema?: HookSettings | G,
+  folderSettingsOrSettings?: HookSettings | FolderSettings,
+  trailingSettings?: HookSettings
+) {
+  // Inject headless into whichever slot holds HookSettings. The base
+  // hook's parseArgs handles the trailing-settings vs folder-settings
+  // disambiguation; we just need to make sure `headless: true` ends up
+  // on the HookSettings the user passed (or a fresh one).
+  if (typeof schemaOrFolderName === 'string') {
+    // Folder form: (folderName, schema, [folderSettings|settings], [settings])
+    if (trailingSettings) {
+      return useControlsBase(
+        schemaOrFolderName as F,
+        settingsOrSchema as G,
+        folderSettingsOrSettings,
+        headless(trailingSettings)
+      )
+    }
+    if (folderSettingsOrSettings && 'store' in (folderSettingsOrSettings as object)) {
+      return useControlsBase(
+        schemaOrFolderName as F,
+        settingsOrSchema as G,
+        undefined,
+        headless(folderSettingsOrSettings as HookSettings)
+      )
+    }
+    return useControlsBase(
+      schemaOrFolderName as F,
+      settingsOrSchema as G,
+      folderSettingsOrSettings,
+      headless()
+    )
+  }
+  // Schema-only form: (schema, [settings])
+  return useControlsBase(schemaOrFolderName, headless(settingsOrSchema as HookSettings | undefined))
 }

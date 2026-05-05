@@ -3,12 +3,13 @@ import type { JSXChild } from '@madenowhere/phaze'
 import { Row, Label } from '../UI'
 import { StyledButtonGroup } from './StyledButtonGroup'
 import { StyledButtonGroupButton } from './StyledButtonGroupButton'
-import { ButtonGroupInputOpts, ButtonGroupOpts } from '../../types'
+import { ButtonGroupInputOpts, ButtonGroupOpts, type StoreType } from '../../types'
 import { useStoreContext } from '../..'
 
 export type ButtonGroupInternalOpts = {
   label: null | JSXChild | string
   opts: ButtonGroupInputOpts
+  store?: StoreType
 }
 
 const getOpts = ({ label: _label, opts: _opts }: ButtonGroupInternalOpts) => {
@@ -26,7 +27,7 @@ const getOpts = ({ label: _label, opts: _opts }: ButtonGroupInternalOpts) => {
 
 export function ButtonGroup(props: ButtonGroupInternalOpts) {
   const { label, opts } = getOpts(props)
-  const store = useStoreContext()
+  const store = props.store ?? useStoreContext()
   return (
     <Row input={!!label}>
       {label && <Label>{label}</Label>}

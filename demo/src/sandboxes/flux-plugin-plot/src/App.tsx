@@ -1,4 +1,4 @@
-import { useControls, monitor } from 'flux'
+import { useControls, monitor, Flux } from 'flux'
 import { plot } from '@flux-ui/plugin-plot'
 
 export default function App() {
@@ -22,6 +22,7 @@ export default function App() {
 
   return (
     <div className="App">
+      <Flux titleBar={false} />
       <pre>{() => `y1(1) = ${values().y1(1)}`}</pre>
       <pre>{() => `y2(1) = ${values().y2(1)}`}</pre>
       <pre>{() => `y3(1) = ${values().y3(1)}`}</pre>

@@ -27,7 +27,11 @@ register(FluxInputs.VECTOR3D, vector3d)
 register(FluxInputs.VECTOR2D, vector2d)
 
 // main hook
-export { useControls } from './useControls'
+export { useControls, type ControlsHandle } from './useControls'
+
+// Per-key signal-like accessor (callable + .set + .subscribe). Drop-in
+// for fabric/photon prop slots — both libraries duck-type on this shape.
+export { controlAccessor, type ControlAccessor } from './control-accessor'
 
 // panel components
 export { Flux, FluxPanel } from './components/Flux'

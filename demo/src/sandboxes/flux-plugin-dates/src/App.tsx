@@ -1,5 +1,5 @@
 import { date } from '@flux-ui/plugin-dates'
-import { useControls } from 'flux'
+import { useControls, Flux } from 'flux'
 
 export default function App() {
   const data = useControls({
@@ -10,5 +10,10 @@ export default function App() {
     }),
   })
 
-  return <div className="App">{() => data().birthday.formattedDate}</div>
+  return (
+    <div className="App">
+      <Flux titleBar={false} />
+      {() => data().birthday.formattedDate}
+    </div>
+  )
 }

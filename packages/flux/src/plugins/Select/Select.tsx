@@ -6,28 +6,22 @@ import type { SelectProps } from './select-types'
 
 export function Select({
   displayValue,
-  value,
   onUpdate,
   id,
   settings,
   disabled,
 }: Pick<SelectProps, 'value' | 'displayValue' | 'onUpdate' | 'id' | 'settings' | 'disabled'>) {
   const { keys, values } = settings
-  // Plain mutable local — phaze components run once so this persists for
-  // the row's lifetime (Pattern 5).
-  let lastDisplayedValue: any
-
-  // in case the value isn't present in values (possibly when changing options
-  // via deps), remember the last correct display value.
-  if (value === values[displayValue]) {
-    lastDisplayedValue = keys[displayValue]
-  }
+  // displayValue may be a phaze Signal/Computed (callable) or a plain
+  // index — resolve defensively each read so both bindings update live.
+  const readIndex = (): number =>
+    typeof displayValue === 'function' ? (displayValue as () => number)() : (displayValue as number)
 
   return (
     <SelectContainer>
       <NativeSelect
         id={id}
-        value={displayValue}
+        value={() => readIndex()}
         onChange={(e: Event) =>
           onUpdate(values[Number((e.currentTarget as HTMLSelectElement).value)])
         }
@@ -38,7 +32,7 @@ export function Select({
           </option>
         ))}
       </NativeSelect>
-      <PresentationalSelect>{lastDisplayedValue}</PresentationalSelect>
+      <PresentationalSelect>{() => keys[readIndex()]}</PresentationalSelect>
       <Chevron toggled />
     </SelectContainer>
   )

@@ -110,9 +110,15 @@ function CustomControl({ path }: { path: string }) {
       {() => {
         const handle = fluxInput()
         if (!handle) return null
-        const { input, set } = handle
+        const { input, value, settings, set } = handle
+        // Static metadata (type/label) lives on `input`. Live state
+        // (value/settings) flows through the per-property accessors so
+        // sliding the range updates the UI without tearing it down.
         if (!('value' in input)) return null
         const dataInput = input as any
+        // Snapshot the schema-time settings for static attrs (min/max/step).
+        // These don't change after registration so a one-time read is fine.
+        const s = (settings() ?? {}) as { min?: number; max?: number; step?: number }
 
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -121,10 +127,10 @@ function CustomControl({ path }: { path: string }) {
             {dataInput.type === 'NUMBER' && (
               <input
                 type="range"
-                value={dataInput.value}
-                min={dataInput.settings?.min ?? 0}
-                max={dataInput.settings?.max ?? 100}
-                step={dataInput.settings?.step ?? 1}
+                value={value as any}
+                min={s.min ?? 0}
+                max={s.max ?? 100}
+                step={s.step ?? 1}
                 onChange={(e: any) => set(parseFloat(e.target.value))}
                 style={{ flex: 1 }}
               />
@@ -133,7 +139,7 @@ function CustomControl({ path }: { path: string }) {
             {dataInput.type === 'STRING' && (
               <input
                 type="text"
-                value={dataInput.value}
+                value={value as any}
                 onChange={(e: any) => set(e.target.value)}
                 style={{ flex: 1, padding: 5 }}
               />
@@ -142,7 +148,7 @@ function CustomControl({ path }: { path: string }) {
             {dataInput.type === 'BOOLEAN' && (
               <input
                 type="checkbox"
-                checked={dataInput.value}
+                checked={value as any}
                 onChange={(e: any) => set(e.target.checked)}
               />
             )}
@@ -150,14 +156,14 @@ function CustomControl({ path }: { path: string }) {
             {dataInput.type === 'COLOR' && (
               <input
                 type="color"
-                value={dataInput.value}
+                value={value as any}
                 onChange={(e: any) => set(e.target.value)}
                 style={{ width: 60, height: 30 }}
               />
             )}
 
             <span style={{ minWidth: 60, textAlign: 'right', color: '#666' }}>
-              {JSON.stringify(dataInput.value)}
+              {() => JSON.stringify(value())}
             </span>
           </div>
         )

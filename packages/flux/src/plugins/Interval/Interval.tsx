@@ -25,6 +25,12 @@ function IntervalSlider({ value, bounds: [min, max], onDrag, ...settings }: Inte
   let rangeWidth = 0
   const scrubberWidth = useTh('sizes', 'scrubberWidth')
 
+  // value is a phaze Signal/Computed (the displayValue threaded down
+  // from IntervalComponent). Resolve defensively each read so the
+  // scrubber positions and drag math reflect live store updates.
+  const readValue = (): InternalInterval =>
+    typeof value === 'function' ? (value as () => InternalInterval)() : (value as InternalInterval)
+
   const bind = useDrag(({ event, first, xy: [x], movement: [mx], memo = {} }) => {
     if (first) {
       const el = ref()
@@ -34,10 +40,11 @@ function IntervalSlider({ value, bounds: [min, max], onDrag, ...settings }: Inte
 
       const targetIsScrub = event?.target === minScrubberRef() || event?.target === maxScrubberRef()
 
+      const v = readValue()
       memo.pos = invertedRange((x - left) / width, min, max)
-      const delta = Math.abs(memo.pos - value.min) - Math.abs(memo.pos - value.max)
-      memo.key = delta < 0 || (delta === 0 && memo.pos <= value.min) ? 'min' : 'max'
-      if (targetIsScrub) memo.pos = value[memo.key as keyof InternalInterval]
+      const delta = Math.abs(memo.pos - v.min) - Math.abs(memo.pos - v.max)
+      memo.key = delta < 0 || (delta === 0 && memo.pos <= v.min) ? 'min' : 'max'
+      if (targetIsScrub) memo.pos = v[memo.key as keyof InternalInterval]
     }
     const newValue = memo.pos + invertedRange(mx / rangeWidth, 0, max - min)
 
@@ -45,16 +52,19 @@ function IntervalSlider({ value, bounds: [min, max], onDrag, ...settings }: Inte
     return memo
   })
 
-  const minStyle = `calc(${range(value.min, min, max)} * (100% - ${scrubberWidth} - 8px) + 4px)`
-  const maxStyle = `calc(${1 - range(value.max, min, max)} * (100% - ${scrubberWidth} - 8px) + 4px)`
+  // Thunked so the indicator + scrubbers track displayValue reactively.
+  // Phaze components run once — a literal string here would freeze at
+  // initial mount values.
+  const minStyle = () => `calc(${range(readValue().min, min, max)} * (100% - ${scrubberWidth} - 8px) + 4px)`
+  const maxStyle = () => `calc(${1 - range(readValue().max, min, max)} * (100% - ${scrubberWidth} - 8px) + 4px)`
 
   return (
     <RangeWrapper innerRef={ref} {...bind()}>
       <Range>
-        <Indicator style={{ left: minStyle, right: maxStyle }} />
+        <Indicator style={() => ({ left: minStyle(), right: maxStyle() })} />
       </Range>
-      <Scrubber position="left" innerRef={minScrubberRef} style={{ left: minStyle }} />
-      <Scrubber position="right" innerRef={maxScrubberRef} style={{ right: maxStyle }} />
+      <Scrubber position="left" innerRef={minScrubberRef} style={() => ({ left: minStyle() })} />
+      <Scrubber position="right" innerRef={maxScrubberRef} style={() => ({ right: maxStyle() })} />
     </RangeWrapper>
   )
 }

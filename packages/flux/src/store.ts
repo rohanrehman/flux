@@ -40,33 +40,19 @@ export const Store = function (this: StoreType) {
    */
   this.getVisiblePaths = () => {
     const data = this.getData()
-    const paths = Object.keys(data)
-    const hiddenFolders: string[] = []
-    Object.entries(folders).forEach(([path, settings]) => {
-      if (
-        // the folder settings have a render function
-        settings.render &&
-        // and the folder path matches a data path
-        // (this can happen on first mount and could probably be solved if folder settings
-        // were set together with the store data. In fact, the store data is set in the
-        // mount effect while folders settings are set as plain locals).
-        paths.some((p) => p.indexOf(path) === 0) &&
-        // the folder settings is supposed to be hidden
-        !settings.render(this.get)
-      )
-        hiddenFolders.push(path + '.')
-    })
-
     const visiblePaths: string[] = []
     orderedPaths.forEach((path) => {
       if (
         path in data &&
-        // if input is mounted
+        // input is mounted
         data[path].__refCount > 0 &&
-        // if it's not included in a hidden folder
-        hiddenFolders.every((p) => path.indexOf(p) === -1) &&
-        // if its render functions doesn't exists or returns true
-        (!data[path].render || data[path].render!(this.get))
+        // input-level render fn — untracked here so per-input render
+        // changes don't rebuild the panel; folder-level render fns are
+        // gated reactively at the <Folder> level via CSS display, see
+        // Folder.tsx. (Per-input visibility currently mirrors that at the
+        // panel level via untrack — no consumer in the active schema
+        // relies on input-level render reactivity yet.)
+        (!data[path].render || untrack(() => data[path].render!(this.get)))
       ) {
         visiblePaths.push(path)
       }
