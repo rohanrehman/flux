@@ -5,6 +5,7 @@ export default defineConfig({
     index: 'src/index.ts',
     plugin: 'src/plugin/index.ts',
     headless: 'src/headless/index.ts',
+    optional: 'src/optional/index.ts',
   },
   format: ['esm'],
   dts: true,

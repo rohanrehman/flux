@@ -1,22 +1,22 @@
 /**
- * Headless version of useControls — same API as `useControls` from
- * `'flux'`, with `{ headless: true }` injected into hookSettings so no
- * Flux panel mounts. Returns the same `ControlsHandle` (callable
- * snapshot, per-key signal accessors, batch set/get).
+ * Headless version of `useFlux` — same API as `useFlux` from `'flux'`,
+ * with `{ headless: true }` injected into hookSettings so no Flux panel
+ * mounts. Returns the same `ControlsHandle` (callable snapshot, per-key
+ * signal accessors, batch set/get).
  */
 
-import { useControls as useControlsBase, type HookSettings, type SchemaOrFn } from '../useControls'
+import { useFlux as useFluxBase, type HookSettings, type SchemaOrFn } from '../useFlux'
 import type { Schema, FolderSettings } from '../types'
 
 const headless = (s?: HookSettings): HookSettings => ({ ...s, headless: true })
 
 /**
- * Headless `useControls` — returns the same `ControlsHandle` as
- * `useControls` from `'flux'`, but injects `{ headless: true }` so no
- * panel mounts. Same single-overload shape as the base hook so generic
- * inference behaves identically.
+ * Headless `useFlux` — returns the same `ControlsHandle` as `useFlux` from
+ * `'flux'`, but injects `{ headless: true }` so no panel mounts. Same
+ * single-overload shape as the base hook so generic inference behaves
+ * identically.
  */
-export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, G extends SchemaOrFn<S>>(
+export function useFlux<S extends Schema, F extends SchemaOrFn<S> | string, G extends SchemaOrFn<S>>(
   schemaOrFolderName: F,
   settingsOrSchema?: HookSettings | G,
   folderSettingsOrSettings?: HookSettings | FolderSettings,
@@ -29,7 +29,7 @@ export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, 
   if (typeof schemaOrFolderName === 'string') {
     // Folder form: (folderName, schema, [folderSettings|settings], [settings])
     if (trailingSettings) {
-      return useControlsBase(
+      return useFluxBase(
         schemaOrFolderName as F,
         settingsOrSchema as G,
         folderSettingsOrSettings,
@@ -37,14 +37,14 @@ export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, 
       )
     }
     if (folderSettingsOrSettings && 'store' in (folderSettingsOrSettings as object)) {
-      return useControlsBase(
+      return useFluxBase(
         schemaOrFolderName as F,
         settingsOrSchema as G,
         undefined,
         headless(folderSettingsOrSettings as HookSettings)
       )
     }
-    return useControlsBase(
+    return useFluxBase(
       schemaOrFolderName as F,
       settingsOrSchema as G,
       folderSettingsOrSettings,
@@ -52,5 +52,5 @@ export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, 
     )
   }
   // Schema-only form: (schema, [settings])
-  return useControlsBase(schemaOrFolderName, headless(settingsOrSchema as HookSettings | undefined))
+  return useFluxBase(schemaOrFolderName, headless(settingsOrSchema as HookSettings | undefined))
 }

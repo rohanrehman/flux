@@ -6,8 +6,8 @@
  * (e.g., for WebXR, React Three Fiber, etc.)
  */
 
-// Export headless version of useControls
-export { useControls } from './useControls'
+// Export headless version of useFlux
+export { useFlux } from './useFlux'
 
 // Store and store management (factory renamed from useCreateStore in the
 // phaze migration; consumers create stores outside hook semantics)

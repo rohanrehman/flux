@@ -76,9 +76,21 @@ export type FluxRootProps = {
    * If true, enables glass/frosted mode. Can also be set via theme.glass.enabled = 'true'
    */
   glass?: boolean
+  /**
+   * Number of `requestAnimationFrame` ticks to wait before mounting the
+   * panel's `<FluxCore>`. Default `2` — gives a host renderer (e.g. a
+   * WebGPU canvas mounted alongside this `<Flux>`) two frames to paint
+   * its first frame before the panel's ~30 input rows block the main
+   * thread. Set `defer={0}` to mount synchronously (legacy behavior).
+   *
+   * The deferral is internal — consumers no longer need a `fluxReady`
+   * signal + RAF gate at the call site; `<Flux ... />` is the whole
+   * mount expression.
+   */
+  defer?: number
 }
 
-export function FluxRoot({ store, hidden = false, theme, collapsed = false, glass, ...props }: FluxRootProps) {
+export function FluxRoot({ store, hidden = false, theme, collapsed = false, glass, defer = 2, ...props }: FluxRootProps) {
   // Theme is a one-time merge — phaze components run once, so the theme
   // computed at mount stays stable for the panel's lifetime. To switch
   // themes the user re-mounts <Flux>, same as preact-era behavior.
@@ -114,15 +126,34 @@ export function FluxRoot({ store, hidden = false, theme, collapsed = false, glas
 
   if (!store || hidden) return null
 
+  // Deferred-mount gate. Mounting ~30 input rows synchronously is enough
+  // to delay first paint of any host canvas (WebGPU, Three, etc.) sharing
+  // the page. Wait `defer` RAF ticks before swapping in <FluxCore> so the
+  // host gets to paint first. defer=0 mounts immediately (legacy / tests).
+  const ready = signal(defer <= 0)
+  if (defer > 0 && typeof window !== 'undefined') {
+    let n = defer
+    const tick = () => {
+      n -= 1
+      if (n <= 0) ready.set(true)
+      else requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }
+
   return (
-    <FluxCore
-      store={store}
-      {...props}
-      glass={glassEnabled}
-      toggled={computedToggled}
-      setToggle={computedSetToggle}
-      rootStyle={themeContext.style as any}
-    />
+    <>
+      {() => ready() ? (
+        <FluxCore
+          store={store}
+          {...props}
+          glass={glassEnabled}
+          toggled={computedToggled}
+          setToggle={computedSetToggle}
+          rootStyle={themeContext.style as any}
+        />
+      ) : null}
+    </>
   )
 }
 
@@ -183,6 +214,24 @@ function FluxCore({
     set({ x: position?.x, y: position?.y })
   })
 
+  // HMR zombie eviction. Phaze has no HMR boundary, so a hot-update of the
+  // host file leaves the previous panel mounted next to the new one. When
+  // our root attaches, scan the DOM for any other `.flux-root` carrying
+  // the SAME storeId and remove them — that's a stale mount from before
+  // HMR. Different storeIds (legitimate multi-`<FluxPanel>` setups with
+  // their own `createStore()`) are untouched. Compiled-out in prod via
+  // `import.meta.env.DEV`.
+  if (import.meta.env.DEV) {
+    effect(() => {
+      const me = rootRef()
+      if (!me || typeof document === 'undefined') return
+      const sel = `.flux-root[data-flux-store-id="${store.storeId}"]`
+      document.querySelectorAll(sel).forEach((el) => {
+        if (el !== me) el.remove()
+      })
+    })
+  }
+
   // shouldShow tracks paths reactively.
   const shouldShow = computed(() => neverHide || paths().length > 0)
 
@@ -194,6 +243,7 @@ function FluxCore({
       glass={glass}
       oneLineLabels={oneLineLabels}
       hideTitleBar={!titleBar}
+      data-flux-store-id={store.storeId}
       style={() => ({ ...rootStyle, display: shouldShow() ? 'block' : 'none' })}>
       {titleBar && (
         <TitleWithFilter

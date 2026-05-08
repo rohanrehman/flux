@@ -20,4 +20,3 @@ export * from './useValuesForPath'
 // ============================================
 export * from './usePopin'
 export * from './useToggle'
-export * from './useCompareMemoize'

@@ -4,18 +4,18 @@ import { ControlInput } from './ControlInput'
 import { log, FluxErrors } from '../../utils/log'
 import { Plugins } from '../../plugin'
 import { Button } from '../Button'
-import { ButtonGroup } from '../ButtonGroup'
-import { Monitor } from '../Monitor'
+import { SpecialComponents, registerSpecialComponent } from './special-registry'
 import { useInputForStore } from '../../hooks/useInput'
 import { SpecialInputs, type StoreType } from '../../types'
 
 type ControlProps = { path: string; store: StoreType }
 
-const specialComponents = {
-  [SpecialInputs.BUTTON]: Button,
-  [SpecialInputs.BUTTON_GROUP]: ButtonGroup,
-  [SpecialInputs.MONITOR]: Monitor,
-}
+// Button is small + commonly used → register statically. Monitor and
+// ButtonGroup are larger and gated behind `@rohanrehman/flux/optional`,
+// which registers them on import. Schemas that declare MONITOR or
+// BUTTON_GROUP without importing /optional fall through to "unsupported
+// input" (logged warning).
+registerSpecialComponent(SpecialInputs.BUTTON, Button)
 
 export function Control({ path, store }: ControlProps) {
   const [inputSignal, { set, setSettings, disable, storeId, emitOnEditStart, emitOnEditEnd }] = useInputForStore(store, path)
@@ -53,7 +53,11 @@ export function Control({ path, store }: ControlProps) {
     // own extras spread through `inputProps`. The keyed dispatch on
     // `type` resolves to one concrete component but TS can't narrow the
     // union, so the JSX call site widens via `as any`.
-    const SpecialInputForType = specialComponents[type as keyof typeof specialComponents] as any
+    const SpecialInputForType = SpecialComponents[type] as any
+    if (!SpecialInputForType) {
+      log(FluxErrors.UNSUPPORTED_INPUT, type, path)
+      return null
+    }
     inner = <SpecialInputForType label={label} path={path} store={store} {...inputProps} />
   } else if (!(type in Plugins)) {
     log(FluxErrors.UNSUPPORTED_INPUT, type, path)

@@ -45,6 +45,20 @@ export type StoreType = {
   getInput: (path: string) => DataInput | undefined
   get: (path: string) => any
   getDataFromSchema: (schema: any) => [Data, MappedPaths]
+  /**
+   * Lookup table from input short-key (e.g. "fov") to full schema path
+   * (e.g. "Camera.fov"). Populated by `useControls` as it registers
+   * schemas. Used by the module-level `flux` proxy to resolve `flux.fov`
+   * to the right ControlAccessor without the consumer needing to capture
+   * the proxy returned by `useControls`.
+   */
+  keyToPath: Record<string, string>
+  /**
+   * Register a key→path mapping. Called by `useControls`. If the key
+   * already exists with a different path, warns (matching the existing
+   * duplicate-key behaviour in `getDataFromSchema`).
+   */
+  registerKey: (key: string, path: string) => void
   subscribeToEditStart: (path: string, listener: (value: any) => void) => Dispose
   subscribeToEditEnd: (path: string, listener: (value: any) => void) => Dispose
   emitOnEditStart: (path: string) => void

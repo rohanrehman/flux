@@ -1,7 +1,8 @@
 // used as entrypoint
 
 // export all components
-import { Row, Label, Portal, Overlay } from '../components/UI'
+import { Row, Label, Overlay } from '../components/UI'
+import { Portal } from '../components/UI/Portal'
 import { String } from '../plugins/String'
 import { Number } from '../plugins/Number'
 import { RangeSlider } from '../plugins/Number/RangeSlider'

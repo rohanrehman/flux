@@ -28,6 +28,19 @@ export const Store = function (this: StoreType) {
    */
   const orderedPaths = new Set<string>()
 
+  // Module-level `flux` proxy uses this to resolve `flux.fov` → "Camera.fov"
+  // → ControlAccessor for that path — without each consumer needing to
+  // capture the proxy `useControls()` returns.
+  this.keyToPath = {}
+  this.registerKey = (key, path) => {
+    const existing = this.keyToPath[key]
+    if (existing && existing !== path) {
+      warn(FluxErrors.DUPLICATE_KEYS, key, path, existing)
+      return
+    }
+    this.keyToPath[key] = path
+  }
+
   /**
    * For a given data structure, gets all paths for which inputs have
    * a reference __refCount superior to zero. This function is used by the

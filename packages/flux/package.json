@@ -5,7 +5,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "sideEffects": [
-    "**/*.css"
+    "**/*.css",
+    "src/optional/index.ts",
+    "dist/optional.js"
   ],
   "exports": {
     ".": {
@@ -20,14 +22,20 @@
       "types": "./src/headless/index.ts",
       "import": "./dist/headless.js"
     },
+    "./optional": {
+      "types": "./src/optional/index.ts",
+      "import": "./dist/optional.js"
+    },
     "./dist/flux.css": "./dist/flux.css",
-    "./dist/flux.core.css": "./dist/flux.core.css"
+    "./dist/flux.core.css": "./dist/flux.core.css",
+    "./vite": "./vite/index.mjs"
   },
   "files": [
     "dist/**/*.js",
     "dist/**/*.d.ts",
     "dist/flux.css",
-    "dist/flux.core.css"
+    "dist/flux.core.css",
+    "vite/index.mjs"
   ],
   "license": "MIT",
   "repository": {

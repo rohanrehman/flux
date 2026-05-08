@@ -1,5 +1,4 @@
 export * from './math'
-export * from './memo'
 export * from './path'
 export * from './object'
 export * from './input'

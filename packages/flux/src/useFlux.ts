@@ -27,8 +27,9 @@ export type SchemaOrFn<S extends Schema = Schema> = S | (() => S)
 export type ControlsHandle<V extends Record<string, any> = Record<string, any>> = Computed<V> & {
   set: (next: Partial<V>) => void
   get: <K extends keyof V>(key: K) => V[K]
+  merge: <T extends Record<string, any>>(defaults: T, override?: Partial<T>) => T
 } & {
-  [K in keyof V as K extends 'set' | 'get' | 'current' | 'subscribe' | 'name' ? never : K]: ControlAccessor<V[K]>
+  [K in keyof V as K extends 'set' | 'get' | 'merge' | 'current' | 'subscribe' | 'name' ? never : K]: ControlAccessor<V[K]>
 }
 
 export function parseArgs(
@@ -60,7 +61,7 @@ export function parseArgs(
 }
 
 /**
- * Phaze-native `useControls`. Component bodies in phaze run once, so the
+ * Phaze-native `useFlux`. Component bodies in phaze run once, so the
  * setup work is synchronous: parse the schema, register data, wire
  * subscriptions, return a reactive handle. Cleanup parents to the
  * caller's component scope via `effect()` + `cleanup()`.
@@ -77,7 +78,7 @@ type ResolveHandle<F, G> = F extends SchemaOrFn<infer S>
   ? ControlsHandle<SchemaToValues<S2> & Record<string, any>>
   : never
 
-export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, G extends SchemaOrFn<S>>(
+export function useFlux<S extends Schema, F extends SchemaOrFn<S> | string, G extends SchemaOrFn<S>>(
   schemaOrFolderName: F,
   settingsOrSchema?: HookSettings | G,
   folderSettingsOrSettings?: HookSettings | FolderSettings,
@@ -120,6 +121,16 @@ export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, 
     if (onEditStart) onEditStartPaths[path] = onEditStart
     if (onEditEnd) onEditEndPaths[path] = onEditEnd
   })
+
+  // Mirror the key→path mapping onto the store so the module-level `flux`
+  // proxy can resolve `flux.<key>` to a ControlAccessor without consumers
+  // needing to capture this hook's return value. Mounting / unmounting
+  // doesn't have to clean these up — they're stable identifiers, and the
+  // ControlAccessor reads through state.data which is the source of truth
+  // for "input still mounted" via __refCount.
+  for (const key in mappedPaths) {
+    store.registerKey(key, mappedPaths[key].path)
+  }
 
   // Extracts the paths from the initialData and ensures order of paths.
   const paths = store.orderPaths(allPaths)
@@ -187,6 +198,27 @@ export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, 
     return m ? store.get(m.path) : undefined
   }
 
+  // `flux.merge(defaults, override?)` — overlay schema-registered keys with
+  // their ControlAccessors, plain values otherwise. Matches the module-
+  // level `flux.merge` shape so `<Camera {...flux.merge(DEFAULTS, props)}>`
+  // works the same whether you read from the module-level `flux` proxy or
+  // a captured `useFlux({...})` handle. When a key isn't in the schema,
+  // the spread default/override wins.
+  const mergeFn = <T extends Record<string, any>>(defaults: T, override?: Partial<T>): T => {
+    const out: any = { ...defaults, ...(override ?? {}) }
+    for (const key in defaults) {
+      if (mappedPaths[key]) {
+        let acc = accessorCache.get(key)
+        if (!acc) {
+          acc = controlAccessor(store, mappedPaths[key].path)
+          accessorCache.set(key, acc)
+        }
+        out[key] = acc
+      }
+    }
+    return out as T
+  }
+
   // Cache per-key accessors so repeated `flux.fov` reads return the same
   // object identity (lets consumers compare references / use as effect
   // deps). Cleared via cleanup if needed; for now they live as long as
@@ -215,8 +247,9 @@ export function useControls<S extends Schema, F extends SchemaOrFn<S> | string, 
         return acc
       }
 
-      if (prop === 'set') return setMany
-      if (prop === 'get') return getOne
+      if (prop === 'set')   return setMany
+      if (prop === 'get')   return getOne
+      if (prop === 'merge') return mergeFn
 
       return Reflect.get(target, prop, receiver)
     },
